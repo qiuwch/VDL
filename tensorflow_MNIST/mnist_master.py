@@ -62,6 +62,8 @@ def main(_):
   
   # Train
   for _ in range(6):
+    print('Round', _)
+    
     # Run one training step
     W_old = sess.run(W)
     batch_xs, batch_ys = mnist.train.next_batch(100)
@@ -74,13 +76,13 @@ def main(_):
     # Send the delta_W to the other side
     delta_W_data = pickle.dumps(delta_W, -1)
     print(len(delta_W_data))
-    clientSocket.send(delta_W_data)
+    clientSocket.sendall(delta_W_data)
     
     # Receive the delta_W from the other side, and update own model
-    #other_delta_W_data = clientSocket.recv(31521)
-    #other_delta_W = pickle.loads(other_delta_W_data)
-    #W = W + 1
-    #mnist.train.next_batch(100) # skip this batch
+    other_delta_W_data = clientSocket.recv(32000)
+    other_delta_W = pickle.loads(delta_W_data)#other_delta_W_data)
+    W = W + 1
+    mnist.train.next_batch(100) # skip this batch
   
   clientSocket.close()  
   # Test trained model

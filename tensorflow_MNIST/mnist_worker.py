@@ -60,12 +60,15 @@ def main(_):
   connectionSocket, addr = serverSocket.accept()
   
   # Train
-  for _ in range(6):   
+  for _ in range(6):
+    print('Round', _)
+    
     # Receive the delta_W from the other side, and update own model
-    other_delta_W_data = connectionSocket.recv(31521)
-    continue #TODO rm
-    other_delta_W = pickle.loads(other_delta_W_data)
-    W = W + other_delta_W
+    #other_delta_W_data = connectionSocket.recv(32000)
+    f = connectionSocket.makefile("r")
+    #other_delta_W = pickle.loads(other_delta_W_data)
+    other_delta_W = pickle.load(f)
+    #W = W + other_delta_W
     mnist.train.next_batch(100) # skip this batch
     
     # Run one training step
@@ -80,7 +83,7 @@ def main(_):
     # Send the delta_W to the other side
     delta_W_data = pickle.dumps(delta_W, -1)
     print(len(delta_W_data))
-    connectionSocket.send(delta_W_data)
+    connectionSocket.sendall(delta_W_data)
   
   connectionSocket.close()
   # Test trained model

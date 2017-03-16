@@ -3,11 +3,10 @@ Instructions:
 To make this code run, you need to obtain the /tmp/tensorflow/mnist/input_data folder from https://www.tensorflow.org/get_started/mnist/beginners and put that folder in the same folder as this README file.
 
 
-
 Original W_old (numpy.ndarray) size: 31360
 Pickled W_old size: 31521
 
-
+## Single Machine
 <Batch runs: accuracy>
 1: 0.4075
 2: 0.4029
@@ -32,3 +31,8 @@ Pickled W_old size: 31521
 1000: 0.9169 0.9195
 2000: 0.9257 0.9222 0.9211
 10000: 0.9251
+
+
+## Two Machines
+<Batch runs per mach: accuracy>
+6: 0.6929
