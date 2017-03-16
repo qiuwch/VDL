@@ -53,7 +53,7 @@ def main(_):
   tf.global_variables_initializer().run()
   
   # Set up TCP client side
-  serverName = '10.0.0.17'
+  serverName = sys.argv[1]
   serverPort = 12000
   clientSocket = socket(AF_INET, SOCK_STREAM)
   clientSocket.settimeout(5)
