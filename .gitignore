@@ -6,3 +6,4 @@
 *.a
 *~
 local/
+tensorflow_MNIST/input_data

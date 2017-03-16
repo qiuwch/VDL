@@ -1,3 +1,9 @@
+Instructions:
+
+To make this code run, you need to obtain the /tmp/tensorflow/mnist/input_data folder from https://www.tensorflow.org/get_started/mnist/beginners and put that folder in the same folder as this README file.
+
+
+
 Original W_old (numpy.ndarray) size: 31360
 Pickled W_old size: 31521
 
