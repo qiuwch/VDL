@@ -3,40 +3,74 @@ from socket import *
 
 import gym
 
-server_port = 10080
+server_port_1 = 10080
+server_port_2 = 10090
 
-max_len = 1024
+serverSocket_1 = socket(AF_INET, SOCK_STREAM)
+serverSocket_1.bind(('', server_port_1))
+serverSocket_1.listen(5)
 
-serverSocket = socket(AF_INET, SOCK_STREAM)
-serverSocket.bind(('', server_port))
-serverSocket.listen(5)
+serverSocket_2 = socket(AF_INET, SOCK_STREAM)
+serverSocket_2.bind(('', server_port_2))
+serverSocket_2.listen(5)
 
 env = gym.make('CartPole-v0')
 
-connectionSocket, addr1 = serverSocket.accept()
-connectionSocket, addr2 = serverSocket.accept()
+connectionSocket_1, addr1 = serverSocket_1.accept()
+ACTOR1 = True
+connectionSocket_1.setblocking(0)
+
+connectionSocket_2, addr2 = serverSocket_2.accept()
+ACTOR2 = True
+connectionSocket_2.setblocking(0)
+
 while True:
-    try:
-        message = connectionSocket.recv(max_len)
-        if int(message.split()[1]) == 1:
-            max_len = int(message.split()[2])*1024
-            print 'observation length:' + message.split()[2]
-        if int(message.split()[1]) == 2:
-            if int(message.split()[0]) == 1:
-                print 'reward from actor 1:' + message.split()[2]
-            if int(message.split()[0]) == 2:
-                print 'reward from actor 2:' + message.split()[2]
-        if int(message.split()[1]) == 3:
-            if int(message.split()[0]) == 1:
-                print 'observation from actor 1:' + message.split()[2]
-            if int(message.split()[0]) == 2:
-                print 'observation from actor 2:' + message.split()[2]
+    action = env.action_space.sample()
+    #print action
 
-        action = env.action_space.sample()
-        connectionSocket.send(str(action))
-    except IOError:
-        print 'Generating action fail.'
+    if ACTOR1:
+        try:
+            message_1_len = connectionSocket_1.recv(5)
+            print message_1_len
+            if message_1_len:
+                if message_1_len == 'over':
+                    ACTOR1 = False
+                else:
+                    message_1 = connectionSocket_1.recv(int(message_1_len.split()[0]))
+                    if message_1_len.split()[1] == 'o':
+                        observation_1 = message_1
+                        print 'ob_1:' + str(observation_1)
+                    if message_1_len.split()[1] == 'r':
+                        reward_1 = message_1
+                        print 're_1:' + str(reward_1)
+                        connectionSocket_1.send(str(action))
+        except error:
+            pass
 
-serverSocket.close()
+    if ACTOR2:
+        try:
+            message_2_len = connectionSocket_2.recv(5)
+            print message_2_len
+            if message_2_len:
+                if message_2_len == 'over':
+                    ACTOR2 = False
+                else:
+                    message_2 = connectionSocket_2.recv(int(message_2_len.split()[0]))
+                    if message_2_len.split()[1] == 'o':
+                        observation_2 = message_2
+                        print 'ob_2:' + str(observation_2)
+                    if message_2_len.split()[1] == 'r':
+                        reward_2 = message_2
+                        print 're_2:' + str(reward_2)
+                        connectionSocket_2.send(str(action))
+        except error:
+            pass
+
+    if (not ACTOR1) and (not ACTOR2):
+        break
+
+
+serverSocket_1.close()
+serverSocket_2.close()
 
 
