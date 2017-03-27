@@ -46,6 +46,10 @@ def test_FPSCounter():
             if time.time() - start > sec_threshold:
                 break
 
+def get_an_intelligent_action():
+    # do something
+    pass
+
 def run_env(env_name):
     # Need to disable the fps constraint so that I can get an accurate number
     fps_counter = FPSCounter()
@@ -55,7 +59,12 @@ def run_env(env_name):
     start_time = time.time()
     while(1):
         # env.render()
-        env.step(env.action_space.sample())
+        action = env.action_space.sample() # Get a random action
+        # action = get_an_intelligent_action()
+        [obs, reward] = env.step(action) # actor/environment process 2, openai gym
+        # Learn based on obs and reward
+        # learn(obs, reward) # learn process 1. tensorflow
+
         fps_counter.tick()
         if time.time() - start_time > sec_threshold:
             break
