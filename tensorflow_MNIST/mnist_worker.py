@@ -96,16 +96,8 @@ def train():
   for _ in range(num_rounds):
     #print('Round', _)
     
-    # Receive delta_W, delta_b from the other side, and update own model
-    #TODO other_delta_W_data = connectionSocket.recv(32000)
-    f = connectionSocket.makefile("r")
-    #other_delta_W = pickle.loads(other_delta_W_data)
-    other_delta_W = pickle.load(f)
-    f = connectionSocket.makefile("r")
-    other_delta_b = pickle.load(f)
-    W.assign(W + other_delta_W).eval()
-    b.assign(b + other_delta_b).eval()
-    mnist.train.next_batch(batch_size) # skip this batch
+    # Skip one batch
+    mnist.train.next_batch(batch_size)
     
     # Run one training step
     W_old = sess.run(W)
@@ -119,6 +111,14 @@ def train():
     delta_W = W_new - W_old
     delta_b = b_new - b_old
     
+    # Receive delta_W, delta_b from the other side, and update own model
+    #TODO other_delta_W_data = connectionSocket.recv(32000)
+    f = connectionSocket.makefile("r")
+    #other_delta_W = pickle.loads(other_delta_W_data)
+    other_delta_W = pickle.load(f)
+    f = connectionSocket.makefile("r")
+    other_delta_b = pickle.load(f)
+    
     # Send delta_W, delta_b to the other side
     delta_W_data = pickle.dumps(delta_W, -1)
     delta_b_data = pickle.dumps(delta_b, -1)
@@ -126,6 +126,10 @@ def train():
     connectionSocket.sendall(delta_b_data)
     #print(len(delta_W_data), len(delta_b_data))
   
+    # Update own model based on delta_W, delta_b from the other side
+    W.assign(W + other_delta_W).eval()
+    b.assign(b + other_delta_b).eval()
+    
   f.close()
   
 def close_TCP_server():

@@ -18,6 +18,8 @@ from socket import *
 import pickle
 import time
 
+#TODO threading support
+
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # Disable Tensorflow debugging logs
 np.set_printoptions(threshold=np.nan)
@@ -117,16 +119,20 @@ def train():
     clientSocket.sendall(delta_b_data)
     #print(len(delta_W_data), len(delta_b_data))
     
-    # Receive delta_W, delta_b from the other side, and update own model
+    # Receive delta_W, delta_b from the other side
     #TODO other_delta_W_data = clientSocket.recv(32000)
     f = clientSocket.makefile("r")
     #other_delta_W = pickle.loads(other_delta_W_data)
     other_delta_W = pickle.load(f)
     f = clientSocket.makefile("r")
     other_delta_b = pickle.load(f)
+    
+    # Update own model based on delta_W, delta_b from the other side
     W.assign(W + other_delta_W).eval()
     b.assign(b + other_delta_b).eval()
-    mnist.train.next_batch(batch_size) # skip this batch
+    
+    # Skip one batch
+    mnist.train.next_batch(batch_size)
   
   f.close()
 
