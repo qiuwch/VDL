@@ -23,13 +23,43 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # Disable Tensorflow debugging logs
 np.set_printoptions(threshold=np.nan)
 FLAGS = None
 
-
 def main(_):
+  global mnist, sess, t0, t1, t2, t3
+
   t0 = time.time()
+  parse_cmd_args()
   # Import data
   mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
 
-  # Create the model
+  create_model()
+  sess = tf.InteractiveSession()
+  tf.global_variables_initializer().run()
+
+  t1 = time.time()
+  set_up_TCP_client()
+  
+  t2 = time.time()
+  train()
+  
+  close_TCP_client()
+  test_model()
+  
+  t3 = time.time()
+  print_results()
+
+
+def parse_cmd_args():
+  "Parse command line arguments"
+  global serverName, batch_size, num_rounds
+  
+  serverName = sys.argv[1]
+  batch_size = int(sys.argv[2]);
+  num_rounds = int(sys.argv[3]);
+  
+def create_model():
+  "Create the Tensorflow model for MNIST task"
+  global x, W, b, y, y_, train_step
+   
   x = tf.placeholder(tf.float32, [None, 784])
   W = tf.Variable(tf.zeros([784, 10]))
   b = tf.Variable(tf.zeros([10]))
@@ -50,23 +80,21 @@ def main(_):
   cross_entropy = tf.reduce_mean(
       tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y))
   train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
+  return
 
-  sess = tf.InteractiveSession()
-  tf.global_variables_initializer().run()
-
-  t1 = time.time()
-  # Set up TCP client side
-  serverName = sys.argv[1]
+def set_up_TCP_client():
+  "Set up TCP client side"
+  global clientSocket
+  
   serverPort = 12000
   clientSocket = socket(AF_INET, SOCK_STREAM)
   clientSocket.settimeout(5)
   clientSocket.connect((serverName,serverPort))
   clientSocket.settimeout(None)
+
+def train():
+  "Train the Tensorflow MNIST model"
   
-  t2 = time.time()
-  # Train
-  batch_size = int(sys.argv[2]);
-  num_rounds = int(sys.argv[3]);
   for _ in range(num_rounds):
     #print('Round', _)
     
@@ -100,21 +128,30 @@ def main(_):
     b.assign(b + other_delta_b).eval()
     mnist.train.next_batch(batch_size) # skip this batch
   
-  time.sleep(2) # prevents "socket.error: [Errno 104] Connection reset by peer" on the server side
   f.close()
+
+def close_TCP_client():
+  "Close the TCP client side"
+  time.sleep(2) # prevents "socket.error: [Errno 104] Connection reset by peer" on the server side
   clientSocket.close()
   #print(sess.run(W)) #TODODO rm
-  # Test trained model
-  correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
-  accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-  t3 = time.time()
+
+def test_model():
+  "Test trained model"
+  global accuracy
   
+  correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
+  accuracy_calc = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+  accuracy = sess.run(accuracy_calc, feed_dict={x: mnist.test.images,
+                                      y_: mnist.test.labels})
+
+def print_results():
+  "Print the results of the model training + testing"
   print("Batch size: ", batch_size)
   print("Number of rounds per machine: ", num_rounds)
   num_machines = 2 # TODO variable
   print("Total number of rounds: ", num_rounds * num_machines)
-  print("Accuracy: ", sess.run(accuracy, feed_dict={x: mnist.test.images,
-                                      y_: mnist.test.labels}))
+  print("Accuracy: ", accuracy)
   print("Timestamps: ", t1-t0, t2-t1, t3-t2, t3-t0)
 
 if __name__ == '__main__':

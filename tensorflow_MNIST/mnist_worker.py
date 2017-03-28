@@ -25,11 +25,41 @@ FLAGS = None
 
 
 def main(_):
+  global mnist, sess, t0, t1, t2, t3
+
   t0 = time.time()
+  parse_cmd_args()
   # Import data
   mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
+  
+  create_model()
+  sess = tf.InteractiveSession()
+  tf.global_variables_initializer().run()
 
-  # Create the model
+  t1 = time.time()
+  set_up_TCP_server()
+  
+  t2 = time.time()
+  train()
+  
+  close_TCP_server()
+  test_model()
+  
+  t3 = time.time()
+  print_results()
+                                  
+
+def parse_cmd_args():
+  "Parse command line arguments"
+  global batch_size, num_rounds
+  
+  batch_size = int(sys.argv[1]);
+  num_rounds = int(sys.argv[2]);
+
+def create_model():
+  "Create the Tensorflow model for MNIST task"
+  global x, W, b, y, y_, train_step
+  
   x = tf.placeholder(tf.float32, [None, 784])
   W = tf.Variable(tf.zeros([784, 10]))
   b = tf.Variable(tf.zeros([10]))
@@ -50,22 +80,19 @@ def main(_):
   cross_entropy = tf.reduce_mean(
       tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y))
   train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
-  
-  sess = tf.InteractiveSession()
-  tf.global_variables_initializer().run()
 
-  t1 = time.time()
-  # Set up TCP server side
+def set_up_TCP_server():
+  global serverSocket, connectionSocket
+  
+  "Set up TCP server side"
   serverPort = 12000
   serverSocket = socket(AF_INET,SOCK_STREAM)
   serverSocket.bind(('',serverPort))
   serverSocket.listen(1)
   connectionSocket, addr = serverSocket.accept()
   
-  t2 = time.time()
-  # Train
-  batch_size = int(sys.argv[1]);
-  num_rounds = int(sys.argv[2]);
+def train():
+  "Train the Tensorflow MNIST model" 
   for _ in range(num_rounds):
     #print('Round', _)
     
@@ -100,21 +127,30 @@ def main(_):
     #print(len(delta_W_data), len(delta_b_data))
   
   f.close()
+  
+def close_TCP_server():
+  "Close the TCP server side"
   connectionSocket.close()
   serverSocket.close() #TODO find better way
   #print(sess.run(W)) #TODODO rm
-  # Test trained model
-  correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
-  accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-  t3 = time.time()
   
+def test_model():
+  "Test trained model"
+  global accuracy
+  
+  correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
+  accuracy_calc = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+  accuracy = sess.run(accuracy_calc, feed_dict={x: mnist.test.images,
+                                      y_: mnist.test.labels})
+
+def print_results():
+  "Print the results of the model training + testing"
   print("Batch size: ", batch_size)
   print("Number of rounds per machine: ", num_rounds)
   num_machines = 2 # TODO variable
   print("Total number of rounds: ", num_rounds * num_machines)
-  print("Accuracy: ", sess.run(accuracy, feed_dict={x: mnist.test.images,
-                                      y_: mnist.test.labels}))
-  print("Timestamps: ", t1-t0, t2-t1, t3-t2, t3-t0)                                     
+  print("Accuracy: ", accuracy)
+  print("Timestamps: ", t1-t0, t2-t1, t3-t2, t3-t0)
   
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
