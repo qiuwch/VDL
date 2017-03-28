@@ -63,8 +63,10 @@ def main(_):
   tf.global_variables_initializer().run()
   t1 = time.time()
   # Train
-  for _ in range(1000):
-    batch_xs, batch_ys = mnist.train.next_batch(100)
+  batch_size = int(sys.argv[1])
+  num_rounds = int(sys.argv[2])
+  for _ in range(num_rounds):
+    batch_xs, batch_ys = mnist.train.next_batch(batch_size)
     sess.run(train_step, feed_dict={x: batch_xs, y_: batch_ys})
 
   # Test trained model
