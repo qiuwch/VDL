@@ -1,6 +1,6 @@
 import sys
 from socket import *
-import time
+import time, errno
 
 import gym
 
@@ -48,12 +48,12 @@ while True:
                         reward_1 = message_1
                         print 're_1:' + str(reward_1)
                         connectionSocket_1.send(str(action))
-        except timeout:
-            print "pass"
-            pass
-        except error:
-            print "pass"
-            pass
+        except error, e:
+            err = e.args[0]
+            if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
+                pass # No data to read
+            else:
+                ACTOR1 = False
 
     if ACTOR2:
         try:
@@ -72,12 +72,15 @@ while True:
                         reward_2 = message_2
                         print 're_2:' + str(reward_2)
                         connectionSocket_2.send(str(action))
-        except timeout:
-            print "pass"
-            pass
-        except error:
-            print "pass"
-            pass
+        except error, e:
+            err = e.args[0]
+            if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
+                pass # No data to read
+            else:
+                ACTOR2 = False
+
+
+
 
     if (not ACTOR1) and (not ACTOR2):
         break
