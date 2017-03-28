@@ -33,7 +33,7 @@ while True:
 
     if ACTOR1:
         try:
-            time.sleep(0.05)
+            # time.sleep(0.05)
             message_1_len = connectionSocket_1.recv(5)
             print message_1_len
             if message_1_len:
@@ -57,7 +57,7 @@ while True:
 
     if ACTOR2:
         try:
-            time.sleep(0.05)
+            # time.sleep(0.05)
             message_2_len = connectionSocket_2.recv(5)
             print message_2_len
             if message_2_len:
@@ -87,5 +87,3 @@ print (t1-t0)
 
 serverSocket_1.close()
 serverSocket_2.close()
-
-
