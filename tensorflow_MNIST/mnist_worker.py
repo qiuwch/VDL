@@ -16,6 +16,7 @@ import tensorflow as tf
 import numpy as np
 from socket import *
 import pickle
+import time
 
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # Disable Tensorflow debugging logs
@@ -24,6 +25,7 @@ FLAGS = None
 
 
 def main(_):
+  t0 = time.time()
   # Import data
   mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
 
@@ -52,6 +54,7 @@ def main(_):
   sess = tf.InteractiveSession()
   tf.global_variables_initializer().run()
 
+  t1 = time.time()
   # Set up TCP server side
   serverPort = 12000
   serverSocket = socket(AF_INET,SOCK_STREAM)
@@ -59,38 +62,59 @@ def main(_):
   serverSocket.listen(1)
   connectionSocket, addr = serverSocket.accept()
   
+  t2 = time.time()
   # Train
-  for _ in range(6):
-    print('Round', _)
+  batch_size = int(sys.argv[1]);
+  num_rounds = int(sys.argv[2]);
+  for _ in range(num_rounds):
+    #print('Round', _)
     
-    # Receive the delta_W from the other side, and update own model
-    #other_delta_W_data = connectionSocket.recv(32000)
+    # Receive delta_W, delta_b from the other side, and update own model
+    #TODO other_delta_W_data = connectionSocket.recv(32000)
     f = connectionSocket.makefile("r")
     #other_delta_W = pickle.loads(other_delta_W_data)
     other_delta_W = pickle.load(f)
-    #W = W + other_delta_W
-    mnist.train.next_batch(100) # skip this batch
+    f = connectionSocket.makefile("r")
+    other_delta_b = pickle.load(f)
+    W.assign(W + other_delta_W).eval()
+    b.assign(b + other_delta_b).eval()
+    mnist.train.next_batch(batch_size) # skip this batch
     
     # Run one training step
     W_old = sess.run(W)
-    batch_xs, batch_ys = mnist.train.next_batch(100)
+    b_old = sess.run(b)
+    batch_xs, batch_ys = mnist.train.next_batch(batch_size)
     sess.run(train_step, feed_dict={x: batch_xs, y_: batch_ys})
     
-    # Find delta_W
+    # Find delta_W, delta_b
     W_new = sess.run(W)
+    b_new = sess.run(b)
     delta_W = W_new - W_old
+    delta_b = b_new - b_old
     
-    # Send the delta_W to the other side
+    # Send delta_W, delta_b to the other side
     delta_W_data = pickle.dumps(delta_W, -1)
-    print(len(delta_W_data))
+    delta_b_data = pickle.dumps(delta_b, -1)
     connectionSocket.sendall(delta_W_data)
+    connectionSocket.sendall(delta_b_data)
+    #print(len(delta_W_data), len(delta_b_data))
   
+  f.close()
   connectionSocket.close()
+  serverSocket.close() #TODO find better way
+  #print(sess.run(W)) #TODODO rm
   # Test trained model
   correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
   accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-  print(sess.run(accuracy, feed_dict={x: mnist.test.images,
+  t3 = time.time()
+  
+  print("Batch size: ", batch_size)
+  print("Number of rounds per machine: ", num_rounds)
+  num_machines = 2 # TODO variable
+  print("Total number of rounds: ", num_rounds * num_machines)
+  print("Accuracy: ", sess.run(accuracy, feed_dict={x: mnist.test.images,
                                       y_: mnist.test.labels}))
+  print("Timestamps: ", t1-t0, t2-t1, t3-t2, t3-t0)                                     
   
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()

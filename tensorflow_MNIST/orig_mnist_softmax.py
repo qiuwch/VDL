@@ -27,11 +27,13 @@ import sys
 from tensorflow.examples.tutorials.mnist import input_data
 
 import tensorflow as tf
+import time
 
 FLAGS = None
 
 
 def main(_):
+  t0 = time.time()
   # Import data
   mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
 
@@ -59,6 +61,7 @@ def main(_):
 
   sess = tf.InteractiveSession()
   tf.global_variables_initializer().run()
+  t1 = time.time()
   # Train
   for _ in range(1000):
     batch_xs, batch_ys = mnist.train.next_batch(100)
@@ -67,8 +70,10 @@ def main(_):
   # Test trained model
   correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
   accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+  t2 = time.time()
   print(sess.run(accuracy, feed_dict={x: mnist.test.images,
                                       y_: mnist.test.labels}))
+  print("Timestamps: ", t1-t0, 0.0, t2-t1, t2-t0)
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
