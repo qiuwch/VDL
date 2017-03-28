@@ -2,7 +2,9 @@
 #from socket import *
 
 import gym
+import time
 
+t0 = time.time()
 #server_host = 'localhost'
 #server_port = 10090
 
@@ -22,20 +24,22 @@ import gym
 env = gym.make('CartPole-v0')
 for i_episode in range(20):
     observation = env.reset()
-    print observation
+    #print observation
     #send_us(observation, 0)
     for t in range(100):
-        env.render()
+        #env.render()
         action = env.action_space.sample()
         #action = int(clientSocket.recv(1))
         observation, reward, done, info = env.step(action)
-        print 'ob:' + str(observation)
-        print 're:' + str(reward)
+        #print 'ob:' + str(observation)
+        #print 're:' + str(reward)
         #send_us(observation, reward)
         if done:
-            print("Episode finished after {} timesteps".format(t+1))
+            #print("Episode finished after {} timesteps".format(t+1))
             break
 
+t1 = time.time()
+print (t1-t0)
 #clientSocket.send('over')
 #clientSocket.close()
 
