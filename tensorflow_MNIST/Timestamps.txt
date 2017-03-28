@@ -1,0 +1,24 @@
+## Run sequentially
+
+[vyan1@n001 tensorflow_MNIST]$ python orig_mnist_softmax.py
+0.9211
+Timestamps:  0.787020206451 0.0 2.1836078167 2.97062802315
+
+[vyan1@n001 tensorflow_MNIST]$ python mnist_master.py 10.1.1.13 100 500
+Batch size:  100
+Number of rounds per machine:  500
+Total number of rounds:  1000
+Accuracy:  0.9139
+Timestamps:  0.707139015198 0.00037693977356 63.6440589428 64.3515748978
+
+[vyan1@n003 tensorflow_MNIST]$ python mnist_worker.py 100 500
+Batch size:  100
+Number of rounds per machine:  500
+Total number of rounds:  1000
+Accuracy:  0.9139
+Timestamps:  0.562910795212 4.61374616623 61.5339448452 66.7106018066
+
+
+
+
+## Run concurrently

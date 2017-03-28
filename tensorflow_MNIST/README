@@ -6,7 +6,7 @@ To make this code run, you need to obtain the /tmp/tensorflow/mnist/input_data f
 Original W_old (numpy.ndarray) size: 31360
 Pickled W_old size: 31521
 
-## Single Machine
+## Single Machine; batch size = 100
 <Batch runs: accuracy>
 1: 0.4075
 2: 0.4029
@@ -33,6 +33,18 @@ Pickled W_old size: 31521
 10000: 0.9251
 
 
-## Two Machines
+## Two Machines; batch size = 100
 <Batch runs per mach: accuracy>
-6: 0.6929
+1: 0.4029
+2: 0.5023
+3: 0.4972(?)
+4: 0.7076(?)
+5: 0.7821
+6: 0.7984
+10: 0.7874
+25: 0.8609(?)
+50: 0.8943
+100: 0.9037
+250: 0.9094(?)
+500: 0.9174 0.9205
+1000: 0.9257(?)
