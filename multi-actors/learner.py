@@ -4,6 +4,10 @@ import time, errno
 
 import gym
 
+def log(msg):
+    # print msg
+    pass
+
 server_port_1 = 10080
 server_port_2 = 10090
 
@@ -35,7 +39,7 @@ while True:
         try:
             # time.sleep(0.05)
             message_1_len = connectionSocket_1.recv(5)
-            print message_1_len
+            log(message_1_len)
             if message_1_len:
                 if message_1_len == 'over':
                     ACTOR1 = False
@@ -43,10 +47,10 @@ while True:
                     message_1 = connectionSocket_1.recv(int(message_1_len.split()[0]))
                     if message_1_len.split()[1] == 'o':
                         observation_1 = message_1
-                        print 'ob_1:' + str(observation_1)
+                        log('ob_1:' + str(observation_1))
                     if message_1_len.split()[1] == 'r':
                         reward_1 = message_1
-                        print 're_1:' + str(reward_1)
+                        log('re_1:' + str(reward_1))
                         connectionSocket_1.send(str(action))
         except error, e:
             err = e.args[0]
@@ -59,7 +63,7 @@ while True:
         try:
             # time.sleep(0.05)
             message_2_len = connectionSocket_2.recv(5)
-            print message_2_len
+            log(message_2_len)
             if message_2_len:
                 if message_2_len == 'over':
                     ACTOR2 = False
@@ -67,10 +71,10 @@ while True:
                     message_2 = connectionSocket_2.recv(int(message_2_len.split()[0]))
                     if message_2_len.split()[1] == 'o':
                         observation_2 = message_2
-                        print 'ob_2:' + str(observation_2)
+                        log('ob_2:' + str(observation_2))
                     if message_2_len.split()[1] == 'r':
                         reward_2 = message_2
-                        print 're_2:' + str(reward_2)
+                        log('re_2:' + str(reward_2))
                         connectionSocket_2.send(str(action))
         except error, e:
             err = e.args[0]

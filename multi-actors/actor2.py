@@ -3,6 +3,10 @@ from socket import *
 
 import gym
 
+def log(msg):
+    # print msg
+    pass
+
 server_host = "10.1.1.11"
 server_port = 10090
 
@@ -11,18 +15,18 @@ clientSocket.connect((server_host, server_port))
 
 def send_us(observation, reward):
     ob_len = len(str(observation))
-    print 'ob_len:' + str(ob_len)
+    log('ob_len:' + str(ob_len))
     clientSocket.send(str(ob_len) + ' o ' + str(observation))
 
     re_len = len(str(reward))
-    print 're_len:' + str(re_len)
+    log('re_len:' + str(re_len))
     clientSocket.send('0' + str(re_len) + ' r ' + str(reward))
     return
 
 env = gym.make('CartPole-v0')
 for i_episode in range(10):
     observation = env.reset()
-    print observation
+    log(observation)
     send_us(observation, 0)
     for t in range(100):
         #env.render()
@@ -32,14 +36,14 @@ for i_episode in range(10):
         #except timeout:
         #    continue
         observation, reward, done, info = env.step(action)
-        print 'ob:' + str(observation)
-        print 're:' + str(reward)
+        log('ob:' + str(observation))
+        log('re:' + str(reward))
         send_us(observation, reward)
         if done:
-            print("Episode finished after {} timesteps".format(t+1))
+            log("Episode finished after {} timesteps".format(t+1))
             break
 
 clientSocket.send('over')
-print "over"
+log("over")
 clientSocket.close()
 
