@@ -14,12 +14,11 @@ import input_data
 
 import tensorflow as tf
 import numpy as np
-import socket
 import cPickle as pickle
 import time
-import struct
 
 import params
+import socket_util
 
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # Disable Tensorflow debugging logs
@@ -28,7 +27,9 @@ FLAGS = None
 
 
 def main(_):
-  global mnist, sess, t0, t1, t2, t3
+  global mnist, sess
+  global sock, self_IP, mcast_destination
+  global t0, t1, t2, t3
 
   t0 = time.time()
   parse_cmd_args()
@@ -40,12 +41,12 @@ def main(_):
   tf.global_variables_initializer().run()
 
   t1 = time.time()
-  set_up_UDP_mcast_peer()
+  sock, self_IP, mcast_destination = socket_util.set_up_UDP_mcast_peer()
   
   t2 = time.time()
   train()
   
-  close_UDP_mcast_peer()
+  socket_util.close_UDP_mcast_peer(sock)
   test_model()
   
   t3 = time.time()
@@ -83,22 +84,6 @@ def create_model():
   cross_entropy = tf.reduce_mean(
       tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y))
   train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
-
-def set_up_UDP_mcast_peer():
-  "Set up UDP multicast peer"
-  global sock, self_IP, mcast_destination
-  
-  # UDP setup
-  self_IP = socket.gethostbyname(socket.gethostname())
-  port = 12000
-  sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-  sock.bind( ('', port) )
-  
-  # mulitcast setup
-  mcast_destination = (params.MCAST_ADDR, port)
-  mcast_group = socket.inet_aton(params.MCAST_ADDR)
-  mreq = struct.pack('4sL', mcast_group, socket.INADDR_ANY)
-  sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
   
 def train():
   "Train the Tensorflow MNIST model"
@@ -130,7 +115,7 @@ def train():
         other_deltas_data_len_pkt, addr = sock.recvfrom(params.MAX_PACKET_SIZE)
         #print ('H2', other_deltas_data_len_pkt[0:3], addr)
     other_deltas_data_len = int(other_deltas_data_len_pkt[params.LEN_IMAGE_SIZE_PACKET_TAG :])
-    other_deltas_data = socket_recv_chucked_data(other_deltas_data_len)
+    other_deltas_data = socket_util.socket_recv_chucked_data(sock, other_deltas_data_len, self_IP)
     if other_deltas_data == None:
         other_deltas = (tf.zeros([784, 10]), tf.zeros([10]))
     else:
@@ -142,17 +127,12 @@ def train():
     #print ('Sending data...')
     deltas = delta_W, delta_b
     deltas_data = pickle.dumps(deltas, -1)
-    socket_send_data_chucks(deltas_data)
+    socket_util.socket_send_data_chucks(sock, deltas_data, mcast_destination)
     #print ('Sending done.')
   
     # Update own model based on delta_W, delta_b from the other side
     W.assign(W + other_delta_W).eval()
     b.assign(b + other_delta_b).eval()
-    
-  
-def close_UDP_mcast_peer():
-  "Close the UDP multicast peer"
-  sock.close()
   
 def test_model():
   "Test trained model"
@@ -173,50 +153,6 @@ def print_results():
   print("Total number of rounds: ", num_rounds * num_machines)
   print("Accuracy: ", accuracy)
   print("Timestamps: ", t1-t0, t2-t1, t3-t2, t3-t0)
-
-def socket_recv_chucked_data(data_len):
-  '''
-  Let the socket receive chucked data with a given total length. Retry receiving if packets
-  are incomplete, but return null if timeout.
-  @param data_len The total length
-  @return The original unchucked data string, or null if timeout
-  '''
-  
-  sock.settimeout(None)
-  data_remaining = data_len
-  orig_data = ""
-  while data_remaining > 0:
-    try:
-        recv_data_len = min(data_remaining, params.MAX_PACKET_SIZE)
-        sock.settimeout(0.3)
-        chuck, addr = sock.recvfrom(recv_data_len)
-        #print ('L1', chuck[0:3], addr)
-        while addr[0] == self_IP:
-            chuck, addr = sock.recvfrom(recv_data_len)
-            #print ('L2', chuck[0:3], addr)
-        if chuck[0 : params.LEN_IMAGE_SIZE_PACKET_TAG] == params.IMAGE_SIZE_PACKET_TAG:
-            return socket_recv_chucked_data(int(chuck[params.LEN_IMAGE_SIZE_PACKET_TAG :]))
-        orig_data += chuck
-        data_remaining -= recv_data_len
-        sock.settimeout(None)
-    except socket.timeout:
-        print('socket_recv_chucked_data timed out')
-        return None
-    
-  return orig_data
-
-def socket_send_data_chucks(data):
-    '''
-    Send given data string as chucks over the network
-    @params data The data string
-    '''
-    
-    # Send tag "Arnold" followed by data length
-    sock.sendto(params.IMAGE_SIZE_PACKET_TAG + str(len(data)), mcast_destination)
-    
-    for i in xrange(0, sys.getsizeof(data), params.MAX_PACKET_SIZE):
-        data_chuck = data[i : i + params.MAX_PACKET_SIZE]
-        sock.sendto(data_chuck, mcast_destination)
   
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
