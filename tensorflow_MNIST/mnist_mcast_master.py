@@ -89,17 +89,17 @@ def create_model():
 
 def set_up_UDP_mcast_peer():
   "Set up UDP multicast peer"
-  global sock, mcast_destination
+  global sock, self_IP, mcast_destination
   
   # UDP setup
+  self_IP = socket.gethostbyname(socket.gethostname())
   port = 12000
   sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   sock.bind( ('', port) )
   
   # mulitcast setup
-  mcast_addr = '224.44.44.55'
-  mcast_destination = ('224.44.44.44', port)
-  mcast_group = socket.inet_aton(mcast_addr)
+  mcast_destination = (params.MCAST_ADDR, port)
+  mcast_group = socket.inet_aton(params.MCAST_ADDR)
   mreq = struct.pack('4sL', mcast_group, socket.INADDR_ANY)
   sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
@@ -122,14 +122,20 @@ def train():
     delta_b = b_new - b_old
     
     # Send delta_W, delta_b to the other side
+    #print ('Sending data...')
     deltas = delta_W, delta_b
     deltas_data = pickle.dumps(deltas, -1)
     socket_send_data_chucks(deltas_data)
+    #print ('Sending done.')
     
     # Receive delta_W, delta_b from the other side
-    other_deltas_data_len_pkt = sock.recvfrom(params.MAX_PACKET_SIZE)[0]
-    while other_deltas_data_len_pkt[0 : params.LEN_IMAGE_SIZE_PACKET_TAG] != params.IMAGE_SIZE_PACKET_TAG:
-        other_deltas_data_len_pkt = sock.recvfrom(params.MAX_PACKET_SIZE)[0]
+    #print ('Receiving data...')
+    other_deltas_data_len_pkt, addr = sock.recvfrom(params.MAX_PACKET_SIZE)
+    #print ('H1', other_deltas_data_len_pkt[0:3], addr)
+    while (other_deltas_data_len_pkt[0 : params.LEN_IMAGE_SIZE_PACKET_TAG] != params.IMAGE_SIZE_PACKET_TAG) \
+        or addr[0] == self_IP:
+        other_deltas_data_len_pkt, addr = sock.recvfrom(params.MAX_PACKET_SIZE)
+        #print ('H2', other_deltas_data_len_pkt[0:3], addr)
     other_deltas_data_len = int(other_deltas_data_len_pkt[params.LEN_IMAGE_SIZE_PACKET_TAG :])
     other_deltas_data = socket_recv_chucked_data(other_deltas_data_len)
     if other_deltas_data == None:
@@ -137,6 +143,7 @@ def train():
     else:
         other_deltas = pickle.loads(other_deltas_data)
     other_delta_W, other_delta_b = other_deltas
+    #print ('Receiving done.')
     
     # Update own model based on delta_W, delta_b from the other side
     W.assign(W + other_delta_W).eval()
@@ -183,8 +190,12 @@ def socket_recv_chucked_data(data_len):
     try:
         recv_data_len = min(data_remaining, params.MAX_PACKET_SIZE)
         sock.settimeout(0.3)
-        chuck = sock.recvfrom(recv_data_len)[0]
-        if chuck[0 : params.LEN_IMAGE_SIZE_PACKET_TAG] == "Arnold":
+        chuck, addr = sock.recvfrom(recv_data_len)
+        #print ('L1', chuck[0:3], addr)
+        while addr[0] == self_IP:
+            chuck, addr = sock.recvfrom(recv_data_len)
+            #print ('L2', chuck[0:3], addr)
+        if chuck[0 : params.LEN_IMAGE_SIZE_PACKET_TAG] == params.IMAGE_SIZE_PACKET_TAG:
             return socket_recv_chucked_data(int(chuck[params.LEN_IMAGE_SIZE_PACKET_TAG :]))
         orig_data += chuck
         data_remaining -= recv_data_len
