@@ -36,23 +36,25 @@ while True:
                 message_len = connectionSocket[i].recv(5)
                 print message_len
                 if message_len:
-                    #if message_1_len == 'over':
-                    #    ACTOR1 = False
-                    #else:
-                    message = connectionSocket[i].recv(int(message_len.split()[0]))
-                    if message_len.split()[1] == 'o':
-                        observation = message
-                        print 'ob_%d:' % i + str(observation)
-                    if message_len.split()[1] == 'r':
-                        reward = message
-                        print 're_%d:' % i + str(reward)
-                        connectionSocket[i].send(str(action))
-            except error, e:
-                err = e.args[0]
-                if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
-                    pass
-                else:
-                    ACTOR[i] = False
+                    if message_len == 'over':
+                        ACTOR[i] = False
+                    else:
+			message = connectionSocket[i].recv(int(message_len.split()[0]))
+		        if message_len.split()[1] == 'o':
+			    observation = message
+			    print 'ob_%d:' % i + str(observation)
+		        if message_len.split()[1] == 'r':
+			    reward = message
+			    print 're_%d:' % i + str(reward)
+			    connectionSocket[i].send(str(action))
+            except error:
+                pass
+                #err = e.args[0]
+                #if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
+                    #pass
+                #else:
+		    #pass
+                    #ACTOR[i] = False
 
     if any(ACTOR):
         pass

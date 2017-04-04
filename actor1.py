@@ -44,7 +44,11 @@ for i_episode in range(10):
             print("Episode finished after {} timesteps".format(t+1))
             break
 
-#clientSocket.send('over')
-#print "over"
-clientSocket.close()
+clientSocket.send('over')
+print "over"
+
+while True:
+    pass
+
+#clientSocket.close()
 
