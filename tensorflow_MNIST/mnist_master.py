@@ -15,7 +15,7 @@ import input_data
 import tensorflow as tf
 import numpy as np
 from socket import *
-import pickle
+import cPickle as pickle
 import time
 
 #TODO threading support

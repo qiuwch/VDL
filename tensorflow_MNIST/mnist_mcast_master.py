@@ -14,52 +14,59 @@ import input_data
 
 import tensorflow as tf
 import numpy as np
-from socket import *
 import cPickle as pickle
 import time
+
+import params
+import socket_util
+
+#TODO threading support
 
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # Disable Tensorflow debugging logs
 np.set_printoptions(threshold=np.nan)
 FLAGS = None
 
-
 def main(_):
-  global mnist, sess, t0, t1, t2, t3
+  global mnist, sess
+  global sock, self_IP, mcast_destination
+  global t0, t1, t2, t3
 
   t0 = time.time()
   parse_cmd_args()
   # Import data
   mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
-  
+
   create_model()
   sess = tf.InteractiveSession()
   tf.global_variables_initializer().run()
 
   t1 = time.time()
-  set_up_TCP_server()
+  sock, self_IP, mcast_destination = socket_util.set_up_UDP_mcast_peer()
+  socket_util.await_start_mcast(sock)
   
   t2 = time.time()
   train()
   
-  close_TCP_server()
+  socket_util.close_UDP_mcast_peer(sock)
   test_model()
   
   t3 = time.time()
   print_results()
-                                  
+
 
 def parse_cmd_args():
   "Parse command line arguments"
-  global batch_size, num_rounds
+  global serverName, batch_size, num_rounds
   
-  batch_size = int(sys.argv[1]);
-  num_rounds = int(sys.argv[2]);
-
+  serverName = sys.argv[1]
+  batch_size = int(sys.argv[2]);
+  num_rounds = int(sys.argv[3]);
+  
 def create_model():
   "Create the Tensorflow model for MNIST task"
   global x, W, b, y, y_, train_step
-  
+   
   x = tf.placeholder(tf.float32, [None, 784])
   W = tf.Variable(tf.zeros([784, 10]))
   b = tf.Variable(tf.zeros([10]))
@@ -80,24 +87,13 @@ def create_model():
   cross_entropy = tf.reduce_mean(
       tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y))
   train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
+  return
 
-def set_up_TCP_server():
-  global serverSocket, connectionSocket
-  
-  "Set up TCP server side"
-  serverPort = 12000
-  serverSocket = socket(AF_INET,SOCK_STREAM)
-  serverSocket.bind(('',serverPort))
-  serverSocket.listen(1)
-  connectionSocket, addr = serverSocket.accept()
-  
 def train():
-  "Train the Tensorflow MNIST model" 
+  "Train the Tensorflow MNIST model"
+  
   for _ in range(num_rounds):
     #print('Round', _)
-    
-    # Skip one batch
-    mnist.train.next_batch(batch_size)
     
     # Run one training step
     W_old = sess.run(W)
@@ -111,33 +107,38 @@ def train():
     delta_W = W_new - W_old
     delta_b = b_new - b_old
     
-    # Receive delta_W, delta_b from the other side, and update own model
-    #TODO other_delta_W_data = connectionSocket.recv(32000)
-    f = connectionSocket.makefile("r")
-    #other_delta_W = pickle.loads(other_delta_W_data)
-    other_delta_W = pickle.load(f)
-    f = connectionSocket.makefile("r")
-    other_delta_b = pickle.load(f)
-    
     # Send delta_W, delta_b to the other side
-    delta_W_data = pickle.dumps(delta_W, -1)
-    delta_b_data = pickle.dumps(delta_b, -1)
-    connectionSocket.sendall(delta_W_data)
-    connectionSocket.sendall(delta_b_data)
-    #print(len(delta_W_data), len(delta_b_data))
-  
+    #print ('Sending data...')
+    deltas = delta_W, delta_b
+    deltas_data = pickle.dumps(deltas, -1)
+    socket_util.socket_send_data_chucks(sock, deltas_data, mcast_destination)
+    #print ('Sending done.')
+    
+    # Receive delta_W, delta_b from the other side
+    #print ('Receiving data...')
+    other_deltas_data_len_pkt, addr = sock.recvfrom(params.MAX_PACKET_SIZE)
+    #print ('H1', other_deltas_data_len_pkt[0:3], addr)
+    while (other_deltas_data_len_pkt[0 : params.LEN_IMAGE_SIZE_PACKET_TAG] != params.IMAGE_SIZE_PACKET_TAG) \
+        or addr[0] == self_IP:
+        other_deltas_data_len_pkt, addr = sock.recvfrom(params.MAX_PACKET_SIZE)
+        #print ('H2', other_deltas_data_len_pkt[0:3], addr)
+    other_deltas_data_len = int(other_deltas_data_len_pkt[params.LEN_IMAGE_SIZE_PACKET_TAG :])
+    other_deltas_data = socket_util.socket_recv_chucked_data(sock, other_deltas_data_len, self_IP)
+    if other_deltas_data == None:
+        other_deltas = (tf.zeros([784, 10]), tf.zeros([10]))
+    else:
+        other_deltas = pickle.loads(other_deltas_data)
+    other_delta_W, other_delta_b = other_deltas
+    #print ('Receiving done.')
+    
     # Update own model based on delta_W, delta_b from the other side
     W.assign(W + other_delta_W).eval()
     b.assign(b + other_delta_b).eval()
     
-  f.close()
+    # Skip one batch
+    mnist.train.next_batch(batch_size)
   
-def close_TCP_server():
-  "Close the TCP server side"
-  connectionSocket.close()
-  serverSocket.close() #TODO find better way
-  #print(sess.run(W)) #TODODO rm
-  
+
 def test_model():
   "Test trained model"
   global accuracy
