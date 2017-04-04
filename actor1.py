@@ -1,10 +1,12 @@
-#import sys
+import sys
 from socket import *
 
 import gym
 
-server_host = "10.1.1.11"
-server_port = 10080
+server_host, server_port = sys.argv[1], int(sys.argv[2])
+
+#server_host = "localhost"
+#server_port = 10000
 
 clientSocket = socket(AF_INET, SOCK_STREAM)
 clientSocket.connect((server_host, server_port))
@@ -42,7 +44,7 @@ for i_episode in range(10):
             print("Episode finished after {} timesteps".format(t+1))
             break
 
-clientSocket.send('over')
-print "over"
+#clientSocket.send('over')
+#print "over"
 clientSocket.close()
 
