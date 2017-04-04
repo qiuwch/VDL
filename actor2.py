@@ -1,10 +1,12 @@
-#import sys
+import sys
 from socket import *
 
 import gym
 
-server_host = "10.1.1.11"
-server_port = 10090
+server_host, server_port = sys.argv[1], int(sys.argv[2])
+
+#server_host = "localhost"
+#server_port = 10001
 
 clientSocket = socket(AF_INET, SOCK_STREAM)
 clientSocket.connect((server_host, server_port))
@@ -41,5 +43,9 @@ for i_episode in range(10):
 
 clientSocket.send('over')
 print "over"
-clientSocket.close()
+
+while True:
+    pass
+
+#clientSocket.close()
 
