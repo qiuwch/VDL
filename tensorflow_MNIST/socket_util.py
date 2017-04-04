@@ -8,20 +8,32 @@ import socket
 import struct
 import params
 
+def set_up_start_mcast():
+    '''
+    Set up the network for start_mcast program
+    '''
+    
+    # UDP setup
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind( ('', params.START_MCAST_PORT_NUM) )
+    
+    mcast_destination = (params.MCAST_ADDR, params.PEER_PORT_NUM)
+    
+    return (sock, mcast_destination)
+
 def set_up_UDP_mcast_peer():
     '''
-    Set up UDP multicast peer
+    Set up the network for UDP multicast peer
     @return Tuple of (the socket, the IP address of self, destination multicast address)
     '''
 
     # UDP setup
     self_IP = socket.gethostbyname(socket.gethostname())
-    port = 12000
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind( ('', port) )
+    sock.bind( ('', params.PEER_PORT_NUM) )
 
     # mulitcast setup
-    mcast_destination = (params.MCAST_ADDR, port)
+    mcast_destination = (params.MCAST_ADDR, params.PEER_PORT_NUM)
     mcast_group = socket.inet_aton(params.MCAST_ADDR)
     mreq = struct.pack('4sL', mcast_group, socket.INADDR_ANY)
     sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
@@ -36,6 +48,18 @@ def close_UDP_mcast_peer(sock):
     '''
     sock.close()
 
+
+def await_start_mcast(sock):
+    '''
+    Blocks and waits for start_mcast signal
+    @params sock The socket to use
+    '''
+    
+    print('Waiting for start_mcast signal...')
+    signal = sock.recvfrom(params.LEN_START_MCAST_SIGNAL)[0]
+    assert (signal == params.START_MCAST_SIGNAL)
+    print('Signal received.')
+    
 
 def socket_send_data_chucks(sock, data, mcast_destination):
     '''

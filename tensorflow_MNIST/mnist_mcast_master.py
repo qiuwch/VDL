@@ -43,6 +43,7 @@ def main(_):
 
   t1 = time.time()
   sock, self_IP, mcast_destination = socket_util.set_up_UDP_mcast_peer()
+  socket_util.await_start_mcast(sock)
   
   t2 = time.time()
   train()
