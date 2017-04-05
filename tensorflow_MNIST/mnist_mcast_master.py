@@ -57,11 +57,10 @@ def main(_):
 
 def parse_cmd_args():
   "Parse command line arguments"
-  global serverName, batch_size, num_rounds
+  global batch_size, num_rounds
   
-  serverName = sys.argv[1]
-  batch_size = int(sys.argv[2]);
-  num_rounds = int(sys.argv[3]);
+  batch_size = int(sys.argv[1]);
+  num_rounds = int(sys.argv[2]);
   
 def create_model():
   "Create the Tensorflow model for MNIST task"
