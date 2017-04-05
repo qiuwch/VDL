@@ -11,7 +11,6 @@ import argparse
 import sys
 
 import input_data
-
 import tensorflow as tf
 import numpy as np
 import cPickle as pickle
@@ -21,8 +20,6 @@ import Queue
 
 import params
 import socket_util
-
-#TODO threading support
 
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # Disable Tensorflow debugging logs
@@ -89,7 +86,6 @@ def create_model():
   cross_entropy = tf.reduce_mean(
       tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y))
   train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
-  return
 
 def train():
   "Train the Tensorflow MNIST model"
@@ -142,10 +138,11 @@ def test_model():
 
 def print_results():
   "Print the results of the model training + testing"
+  
   print("Batch size: ", batch_size)
   print("Number of rounds per machine: ", num_rounds)
-  num_machines = 2 # TODO variable
-  print("Total number of rounds: ", num_rounds * num_machines)
+  print("Msg received = ", "; lost rate = ")
+  print("Total number of rounds: ", num_rounds * num_peers)
   print("Accuracy: ", accuracy)
   print("Timestamps: ", t1-t0, t2-t1, t3-t2, t3-t0)
   

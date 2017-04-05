@@ -26,7 +26,6 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # Disable Tensorflow debugging logs
 np.set_printoptions(threshold=np.nan)
 FLAGS = None
 
-
 def main(_):
   global mnist, sess
   global sock, self_IP, mcast_destination
@@ -145,8 +144,7 @@ def print_results():
   print("Batch size: ", batch_size)
   print("Number of rounds per machine: ", num_rounds)
   print("Msg received = ", "; lost rate = ")
-  num_machines = 2 # TODO variable
-  print("Total number of rounds: ", num_rounds * num_machines)
+  print("Total number of rounds: ", num_rounds * num_peers)
   print("Accuracy: ", accuracy)
   print("Timestamps: ", t1-t0, t2-t1, t3-t2, t3-t0)
   
