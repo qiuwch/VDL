@@ -7,6 +7,16 @@ import gym
 
 num_actors = int(sys.argv[1])
 
+k = 1400
+def frag_recv(mess_len, sock):
+    mess_remain = mess_len
+    mess = ''
+    if mess_remain > 0:
+        mess_temp = sock.recv(min(mess_remain, k))
+        mess += mess_temp
+        mess_remain -= min(mess_remain, k)
+    return mess
+
 server_port = range(num_actors)
 serverSocket = range(num_actors)
 ACTOR = [True for _ in range(num_actors)]
@@ -41,7 +51,7 @@ while True:
                     else:
                         message_len = struct.unpack('I', raw_message_len)[0]
                         print message_len
-                        message = connectionSocket[i].recv((message_len+2))
+                        message = frag_recv((message_len+2), connectionSocket[i])
                         if message.split('_')[0] == 'o':
                             observation = message.split('_')[1]
                             print 'ob_%d:' % i + str(observation)
