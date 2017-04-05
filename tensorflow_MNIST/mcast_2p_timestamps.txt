@@ -1,41 +1,22 @@
-[vyan1@n001 tensorflow_MNIST]$ python mnist_mcast_master.py 2 200 50
-Msg received =  1150 ; Msg expected =  1150 ; lost rate =  0.0
-Accuracy:  0.8848
-Timestamps:  0.574938058853 4.52695894241 1.0329220295 6.13481903076
-
-[vyan1@n003 tensorflow_MNIST]$ python mnist_mcast_worker.py 2 200 50
-Msg received =  1150 ; Msg expected =  1150 ; lost rate =  0.0
-Accuracy:  0.8848
-Timestamps:  0.691368103027 1.54376006126 1.03579378128 3.27092194557
+# Master-worker's results:
+# 2-peers have the same results!
 
 [vyan1@n001 tensorflow_MNIST]$ python mnist_mcast_master.py 2 20 10
 Msg received =  230 ; Msg expected =  230 ; lost rate =  0.0
 Accuracy:  0.5914
 Timestamps:  0.577148914337 3.53236508369 0.205869913101 4.31538391113
 
-[vyan1@n003 tensorflow_MNIST]$ python mnist_mcast_worker.py 2 20 10
-Msg received =  230 ; Msg expected =  230 ; lost rate =  0.0
-Accuracy:  0.5914
-Timestamps:  0.686389923096 1.21196317673 0.209582805634 2.10793590546
+[vyan1@n001 tensorflow_MNIST]$ python mnist_mcast_master.py 2 200 50
+Msg received =  1150 ; Msg expected =  1150 ; lost rate =  0.0
+Accuracy:  0.8848
+Timestamps:  0.574938058853 4.52695894241 1.0329220295 6.13481903076
 
 [vyan1@n001 tensorflow_MNIST]$ python mnist_mcast_master.py 2 100 300
 Msg received =  6900 ; Msg expected =  6900 ; lost rate =  0.0
 Accuracy:  0.9108
 Timestamps:  0.577218770981 7.28070902824 11.6737570763 19.5316848755
 
-[vyan1@n003 tensorflow_MNIST]$ python mnist_mcast_worker.py 2 100 300
-Msg received =  6900 ; Msg expected =  6900 ; lost rate =  0.0
-Accuracy:  0.9108
-Timestamps:  0.683135986328 3.42677903175 11.6703488827 15.7802639008
-
 [vyan1@n001 tensorflow_MNIST]$ python mnist_mcast_master.py 2 1000 50
 Msg received =  1150 ; Msg expected =  1150 ; lost rate =  0.0
 Accuracy:  0.8919
 Timestamps:  0.568765878677 179.72299099 1.54511809349 181.836874962
-
-[vyan1@n003 tensorflow_MNIST]$ python mnist_mcast_worker.py 2 1000 50
-Msg received =  1150 ; Msg expected =  1150 ; lost rate =  0.0
-Accuracy:  0.8919
-Timestamps:  0.699352025986 177.983690023 1.54941010475 180.232452154
-
-
