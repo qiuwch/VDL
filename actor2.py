@@ -1,24 +1,23 @@
 import sys
-from socket import *
+import socket, struct
 
 import gym
 
 server_host, server_port = sys.argv[1], int(sys.argv[2])
 
-#server_host = "localhost"
-#server_port = 10001
-
-clientSocket = socket(AF_INET, SOCK_STREAM)
+clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 clientSocket.connect((server_host, server_port))
 
 def send_us(observation, reward):
     ob_len = len(str(observation))
     print 'ob_len:' + str(ob_len)
-    clientSocket.send(str(ob_len) + ' o ' + str(observation))
+    clientSocket.send(struct.pack('I', ob_len))
+    clientSocket.send('o_' + str(observation))
 
     re_len = len(str(reward))
     print 're_len:' + str(re_len)
-    clientSocket.send('0' + str(re_len) + ' r ' + str(reward))
+    clientSocket.send(struct.pack('I', re_len))
+    clientSocket.send('r_' + str(reward))
     return
 
 env = gym.make('CartPole-v0')
@@ -30,9 +29,8 @@ for i_episode in range(10):
         #env.render()
         #action = env.action_space.sample()
         #try:
-        action = int(clientSocket.recv(1))
-        #except timeout:
-        #    continue
+        raw_action = clientSocket.recv(4)
+        action = struct.unpack('I', raw_action)[0]
         observation, reward, done, info = env.step(action)
         print 'ob:' + str(observation)
         print 're:' + str(reward)

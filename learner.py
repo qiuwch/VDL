@@ -1,5 +1,5 @@
 import sys
-from socket import *
+import socket, struct
 import time
 import errno
 
@@ -15,7 +15,7 @@ addr = range(num_actors)
 port_num = 10000
 for i in range(0, num_actors):
     server_port[i] = (port_num+i)
-    serverSocket[i] = socket(AF_INET, SOCK_STREAM)
+    serverSocket[i] = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     serverSocket[i].bind(('', server_port[i]))
     serverSocket[i].listen(5)
     connectionSocket[i], addr[i] = serverSocket[i].accept()
@@ -33,21 +33,23 @@ while True:
         if ACTOR[i]:
             try:
                 #time.sleep(0.05)
-                message_len = connectionSocket[i].recv(5)
-                print message_len
-                if message_len:
-                    if message_len == 'over':
+                raw_message_len = connectionSocket[i].recv(4)
+                if raw_message_len:
+                    if raw_message_len == 'over':
+                        print raw_message_len
                         ACTOR[i] = False
                     else:
-			message = connectionSocket[i].recv(int(message_len.split()[0]))
-		        if message_len.split()[1] == 'o':
-			    observation = message
-			    print 'ob_%d:' % i + str(observation)
-		        if message_len.split()[1] == 'r':
-			    reward = message
-			    print 're_%d:' % i + str(reward)
-			    connectionSocket[i].send(str(action))
-            except error:
+                        message_len = struct.unpack('I', raw_message_len)[0]
+                        print message_len
+                        message = connectionSocket[i].recv((message_len+2))
+                        if message.split('_')[0] == 'o':
+                            observation = message.split('_')[1]
+                            print 'ob_%d:' % i + str(observation)
+                        if message.split('_')[0] == 'r':
+                            reward = message.split('_')[1]
+                            print 're_%d:' % i + str(reward)
+                            connectionSocket[i].send(struct.pack('I', action))
+            except socket.error:
                 pass
                 #err = e.args[0]
                 #if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
