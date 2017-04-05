@@ -59,10 +59,11 @@ def main(_):
 
 def parse_cmd_args():
   "Parse command line arguments"
-  global batch_size, num_rounds
+  global num_peers, batch_size, num_rounds
   
-  batch_size = int(sys.argv[1]);
-  num_rounds = int(sys.argv[2]);
+  num_peers = int(sys.argv[1]);
+  batch_size = int(sys.argv[2]);
+  num_rounds = int(sys.argv[3]);
   
 def create_model():
   "Create the Tensorflow model for MNIST task"
@@ -95,14 +96,15 @@ def train():
   
   inc_msg_q = Queue.Queue()
   
-  for _ in range(num_rounds):
-    #print('Round', _)
-    
+  for _ in range(num_rounds):    
     # Run one training step
     W_old = sess.run(W)
     b_old = sess.run(b)
     batch_xs, batch_ys = mnist.train.next_batch(batch_size)
     sess.run(train_step, feed_dict={x: batch_xs, y_: batch_ys})
+    
+    # Skip one batch
+    mnist.train.next_batch(batch_size)
     
     # Find delta_W, delta_b
     W_new = sess.run(W)
@@ -116,20 +118,17 @@ def train():
     socket_util.socket_send_data_chucks(sock, deltas_data, mcast_destination)
     
     # Receive delta_W, delta_b from the other side
-    socket_util.socket_recv_chucked_data(sock, self_IP, inc_msg_q)
-    other_deltas_data = inc_msg_q.get()
-    if other_deltas_data == None:
-        other_deltas = (tf.zeros([784, 10]), tf.zeros([10]))
-    else:
-        other_deltas = pickle.loads(other_deltas_data)
+    socket_util.socket_recv_chucked_data(sock, self_IP, inc_msg_q, num_peers)
+    try:
+        other_deltas_data = inc_msg_q.get(False)
+    except Queue.Empty:
+        continue
+    other_deltas = pickle.loads(other_deltas_data)
     other_delta_W, other_delta_b = other_deltas
     
     # Update own model based on delta_W, delta_b from the other side
     W.assign(W + other_delta_W).eval()
     b.assign(b + other_delta_b).eval()
-    
-    # Skip one batch
-    mnist.train.next_batch(batch_size)
   
 
 def test_model():
