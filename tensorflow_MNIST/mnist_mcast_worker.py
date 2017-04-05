@@ -11,11 +11,12 @@ import argparse
 import sys
 
 import input_data
-
 import tensorflow as tf
 import numpy as np
 import cPickle as pickle
 import time
+
+import Queue
 
 import params
 import socket_util
@@ -89,6 +90,8 @@ def create_model():
 def train():
   "Train the Tensorflow MNIST model"
   
+  inc_msg_q = Queue.Queue()
+  
   for _ in range(num_rounds):
     #print('Round', _)
     
@@ -108,28 +111,18 @@ def train():
     delta_b = b_new - b_old
     
     # Receive delta_W, delta_b from the other side
-    #print ('Receiving data...')
-    other_deltas_data_len_pkt, addr = sock.recvfrom(params.MAX_PACKET_SIZE)
-    #print ('H1', other_deltas_data_len_pkt[0:3], addr)
-    while other_deltas_data_len_pkt[0 : params.LEN_IMAGE_SIZE_PACKET_TAG] != params.IMAGE_SIZE_PACKET_TAG \
-        or addr[0] == self_IP:
-        other_deltas_data_len_pkt, addr = sock.recvfrom(params.MAX_PACKET_SIZE)
-        #print ('H2', other_deltas_data_len_pkt[0:3], addr)
-    other_deltas_data_len = int(other_deltas_data_len_pkt[params.LEN_IMAGE_SIZE_PACKET_TAG :])
-    other_deltas_data = socket_util.socket_recv_chucked_data(sock, other_deltas_data_len, self_IP)
+    socket_util.socket_recv_chucked_data(sock, self_IP, inc_msg_q)
+    other_deltas_data = inc_msg_q.get()
     if other_deltas_data == None:
         other_deltas = (tf.zeros([784, 10]), tf.zeros([10]))
     else:
         other_deltas = pickle.loads(other_deltas_data)
     other_delta_W, other_delta_b = other_deltas
-    #print ('Receiving done.')
     
     # Send delta_W, delta_b to the other side
-    #print ('Sending data...')
     deltas = delta_W, delta_b
     deltas_data = pickle.dumps(deltas, -1)
     socket_util.socket_send_data_chucks(sock, deltas_data, mcast_destination)
-    #print ('Sending done.')
   
     # Update own model based on delta_W, delta_b from the other side
     W.assign(W + other_delta_W).eval()

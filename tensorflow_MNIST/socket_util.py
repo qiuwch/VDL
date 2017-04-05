@@ -77,28 +77,31 @@ def socket_send_data_chucks(sock, data, mcast_destination):
         sock.sendto(data_chuck, mcast_destination)
 
 
-def socket_recv_chucked_data(sock, data_len, self_IP):
+def socket_recv_chucked_data(sock, self_IP, queue):
     '''
     Let the socket receive chucked data with a given total length. Retry receiving if packets
     are incomplete, but return null if timeout. Ignore packets sent by self
     @params sock The socket to use
-    @param data_len The total length
     @param self_IP The IP address of self
+    @param queue The queue to store the original data
     @return The original unchucked data string, or null if timeout
     '''
+    
+    data_len_pkt, addr = sock.recvfrom(params.MAX_PACKET_SIZE)
+    while data_len_pkt[0 : params.LEN_IMAGE_SIZE_PACKET_TAG] != params.IMAGE_SIZE_PACKET_TAG \
+        or addr[0] == self_IP:
+        data_len_pkt, addr = sock.recvfrom(params.MAX_PACKET_SIZE)
 
     sock.settimeout(None)
-    data_remaining = data_len
+    data_remaining = int(data_len_pkt[params.LEN_IMAGE_SIZE_PACKET_TAG :])
     orig_data = ""
     while data_remaining > 0:
         try:
             recv_data_len = min(data_remaining, params.MAX_PACKET_SIZE)
             sock.settimeout(0.3)
             chuck, addr = sock.recvfrom(recv_data_len)
-            #print ('L1', chuck[0:3], addr)
             while addr[0] == self_IP:
                 chuck, addr = sock.recvfrom(recv_data_len)
-                #print ('L2', chuck[0:3], addr)
             if chuck[0 : params.LEN_IMAGE_SIZE_PACKET_TAG] == params.IMAGE_SIZE_PACKET_TAG:
                 return socket_recv_chucked_data(int(chuck[params.LEN_IMAGE_SIZE_PACKET_TAG :]))
             orig_data += chuck
@@ -108,4 +111,5 @@ def socket_recv_chucked_data(sock, data_len, self_IP):
             print('socket_recv_chucked_data timed out')
             return None
 
-    return orig_data
+    queue.put(orig_data)
+    return
