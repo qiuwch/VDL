@@ -5,7 +5,7 @@ import errno
 
 import gym
 
-num_actors = int(sys.argv[1])
+num_actors, task = int(sys.argv[1]), sys.argv[2]
 
 k = 1400
 def frag_recv(mess_len, sock):
@@ -31,7 +31,7 @@ for i in range(0, num_actors):
     connectionSocket[i], addr[i] = serverSocket[i].accept()
     connectionSocket[i].settimeout(1.0)
 
-env = gym.make('CartPole-v0')
+env = gym.make(task)
 
 t0 = time.time()
 

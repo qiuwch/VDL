@@ -1,8 +1,10 @@
-#import sys
+import sys
 #from socket import *
 
 import gym
 import time
+
+task = sys.argv[1]
 
 t0 = time.time()
 #server_host = 'localhost'
@@ -15,13 +17,13 @@ t0 = time.time()
 #     ob_len = len(str(observation))
 #     print 'ob_len:' + str(ob_len)
 #     clientSocket.send(str(ob_len) + ' o ' + str(observation))
-# 
+#
 #     re_len = len(str(reward))
 #     print 're_len:' + str(re_len)
 #     clientSocket.send('0' + str(re_len) + ' r ' + str(reward))
 #     return
-# 
-env = gym.make('CartPole-v0')
+#
+env = gym.make(task)
 for i_episode in range(20):
     observation = env.reset()
     #print observation
