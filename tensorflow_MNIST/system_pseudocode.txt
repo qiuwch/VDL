@@ -1,0 +1,31 @@
+1. All peer programs start running, and waits for start_mcast signal
+
+2. start_mcast signals all peers to run
+
+3. Peers run learning alg, and excahnge messages along the way
+Mechanism:
+    dict = {}
+    self_IP = 10.1.1.1
+    deltas = tf.run
+    sock.mcast("Arnold" + data_len)
+    sock.mcast(deltas)
+    while not timeout:
+        msg, addr = recv()
+        if addr == self_IP:
+            ignore
+        elif addr not in dict  or  dict['addr'][0] == 0:
+            if no "Arnold":
+                ignore
+            else:
+                dict['addr'] = [msg.data_len, '']
+        else:
+            if "Arnold":
+                dict['addr'] = [msg.data_len, '']
+            else:
+                dict['addr'][0] -= len(msg)
+                dict['addr'][1] += msg.data
+                if dict['addr'][0] == 0:
+                    Queue.add(dict['addr'][1])
+                    dict['addr'] = [0, '']
+                    
+4. Calculate accuracy and print results
