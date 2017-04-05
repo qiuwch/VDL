@@ -89,8 +89,10 @@ def create_model():
 
 def train():
   "Train the Tensorflow MNIST model"
+  global rcv_msg_num, msg_sent
   
   inc_msg_q = Queue.Queue()
+  rcv_msg_num = msg_sent = 0
   
   for _ in range(num_rounds):    
     # Run one training step
@@ -111,10 +113,10 @@ def train():
     # Send delta_W, delta_b to the other side
     deltas = delta_W, delta_b
     deltas_data = pickle.dumps(deltas, -1)
-    socket_util.socket_send_data_chucks(sock, deltas_data, mcast_destination)
+    msg_sent = socket_util.socket_send_data_chucks(sock, deltas_data, mcast_destination, msg_sent)
     
     # Receive delta_W, delta_b from the other side
-    socket_util.socket_recv_chucked_data(sock, self_IP, inc_msg_q, num_peers)
+    rcv_msg_num = socket_util.socket_recv_chucked_data(sock, self_IP, inc_msg_q, num_peers, rcv_msg_num)
     try:
         other_deltas_data = inc_msg_q.get(False)
     except Queue.Empty:
@@ -126,7 +128,6 @@ def train():
     W.assign(W + other_delta_W).eval()
     b.assign(b + other_delta_b).eval()
   
-
 def test_model():
   "Test trained model"
   global accuracy
@@ -141,8 +142,9 @@ def print_results():
   
   print("Batch size: ", batch_size)
   print("Number of rounds per machine: ", num_rounds)
-  print("Msg received = ", "; lost rate = ")
   print("Total number of rounds: ", num_rounds * num_peers)
+  exp_msg_num = msg_sent * (num_peers - 1);
+  print("Msg received = ", rcv_msg_num, "; Msg expected = ", exp_msg_num, "; lost rate = ", 1 - (rcv_msg_num * 1.0 / exp_msg_num) )
   print("Accuracy: ", accuracy)
   print("Timestamps: ", t1-t0, t2-t1, t3-t2, t3-t0)
   
