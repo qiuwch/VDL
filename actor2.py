@@ -3,7 +3,7 @@ import socket, struct
 
 import gym
 
-server_host, server_port = sys.argv[1], int(sys.argv[2])
+server_host, server_port, task = sys.argv[1], int(sys.argv[2]), sys.argv[3]
 
 clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 clientSocket.connect((server_host, server_port))
@@ -20,7 +20,7 @@ def send_us(observation, reward):
     clientSocket.send('r_' + str(reward))
     return
 
-env = gym.make('CartPole-v0')
+env = gym.make(task)
 for i_episode in range(10):
     observation = env.reset()
     print observation
