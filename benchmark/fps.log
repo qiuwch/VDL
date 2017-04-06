@@ -1,0 +1,26 @@
+[2017-04-05 23:09:42,842] Making new env: CartPole-v0
+[2017-04-05 23:09:42,848] You are calling 'step()' even though this environment has already returned done = True. You should always call 'reset()' once you receive 'done = True' -- any further steps are undefined behavior.
+[2017-04-05 23:09:47,848] Making new env: Breakout-v0
+FPS 114217
+FPS 123373
+FPS 126358
+FPS 128006
+FPS 11750
+FPS 13478
+FPS 13463
+FPS 13482
+[2017-04-05 23:09:52,879] Making new env: Hopper-v1
+FPS 4673
+FPS 4800
+FPS 4914
+FPS 4765
+[2017-04-05 23:09:58,042] Making new env: Humanoid-v1
+FPS 1158
+FPS 1187
+FPS 1178
+FPS 1175
+[2017-04-05 23:10:03,048] Making new env: ppaquette/DoomBasic-v0
+FPS 10339
+FPS 20293
+FPS 20090
+FPS 20274
