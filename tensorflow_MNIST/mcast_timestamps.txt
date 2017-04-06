@@ -20,6 +20,11 @@ Msg received =  1150 ; Msg expected =  1150 ; lost rate =  0.0
 Accuracy:  0.8919
 Timestamps:  0.568765878677 179.72299099 1.54511809349 181.836874962
 
+[vyan1@n001 tensorflow_MNIST]$ python mnist_mcast_peer.py 2 1 20 1000
+Msg received =  22965 ; Msg expected =  23000 ; lost rate =  0.00152173913043
+Accuracy:  0.8823
+Train time:  111.702837944 ; Test time:  0.116846084595
+
 
 
 # 4 peers
@@ -38,7 +43,8 @@ Accuracy:   {0.8090, 0.8086, 0.8350, 0.8124}
             {0.7687, 0.7650, 0.8025, 0.7916}
             {0.7626, 0.7941, 0.7824, 0.7608}  
             avg = 0.7911
-Timestamps:  0.577803850174 18.8448131084 0.891103029251 20.3137199879
+            fixed {0.774, 0.764, 0.8362, 0.8655}
+Train time:  2.06476688385 ; Test time:  0.0382511615753
 
 [vyan1@n001 tensorflow_MNIST]$ python mnist_mcast_peer.py 4 1 100 150
 Msg received =  10347 ; Msg expected =  10350 ; lost rate =  0.000289855072464
@@ -53,4 +59,52 @@ Accuracy:   {0.8684, 0.7928, 0.8587, 0.8142}
             {0.8414, 0.8500, 0.8441, 0.8380}
             {0.8258, 0.8374, 0.8459, 0.8436}
             avg = 0.8384
-Timestamps:  0.575140953064 23.7324359417 1.2885620594 25.5961389542
+Train time:  2.45116090775 ; Test time:  0.042289018631
+---------------Fixed-------------------------
+Msg received =  28462 ; Msg expected =  34500 ; lost rate =  0.175014492754
+Accuracy:  0.8648
+Train time:  141.310014963 ; Test time:  0.142736911774
+Msg received =  28810 ; Msg expected =  34500 ; lost rate =  0.164927536232
+Accuracy:  0.8523
+Train time:  146.092495918 ; Test time:  0.140405893326
+Msg received =  28994 ; Msg expected =  34500 ; lost rate =  0.159594202899
+Accuracy:  0.8542
+Train time:  150.602281094 ; Test time:  0.143172979355
+Msg received =  29101 ; Msg expected =  34500 ; lost rate =  0.156492753623
+Accuracy:  0.8412
+Train time:  150.995280981 ; Test time:  0.147136926651
+
+[vyan1@n001 tensorflow_MNIST]$ python mnist_mcast_peer.py 4 1 20 500
+Msg received =  33477 ; Msg expected =  34500 ; lost rate =  0.029652173913
+Accuracy:  {0.7605, 0.7371, 0.7667, 0.7580}
+Train time:  52.8642230034 ; Test time:  0.0844910144806
+
+
+
+# Multi-thread
+[vyan1@n001 tensorflow_MNIST]$ python mnist_mcast_peer.py 2 1 200 50
+Msg received =  1150 ; Msg expected =  1150 ; lost rate =  0.0
+Accuracy:  0.8912
+Train time:  1.96158981323 ; Test time:  0.0419411659241
+[vyan1@n003 tensorflow_MNIST]$ python mnist_mcast_peer.py 2 2 200 50
+Msg received =  46 ; Msg expected =  1150 ; lost rate =  0.96
+Accuracy:  0.8829
+Train time:  1.30246710777 ; Test time:  0.0342488288879
+
+[vyan1@n001 tensorflow_MNIST]$ python mnist_mcast_peer.py 4 1 200 25
+Msg received =  1725 ; Msg expected =  1725 ; lost rate =  0.0
+Accuracy:  0.8978
+Train time:  2.28508687019 ; Test time:  0.0426721572876
+[vyan1@n003 tensorflow_MNIST]$ python mnist_mcast_peer.py 4 2 200 25
+Msg received =  166 ; Msg expected =  1725 ; lost rate =  0.903768115942
+Accuracy:  0.8631
+Train time:  1.19949603081 ; Test time:  0.0335371494293
+[vyan1@n005 tensorflow_MNIST]$ python mnist_mcast_peer.py 4 3 200 25
+Msg received =  670 ; Msg expected =  1725 ; lost rate =  0.611594202899
+Accuracy:  0.848
+Train time:  1.49229717255 ; Test time:  0.0356709957123
+[vyan1@n007 tensorflow_MNIST]$ python mnist_mcast_peer.py 4 4 200 25
+Msg received =  1247 ; Msg expected =  1725 ; lost rate =  0.277101449275
+Accuracy:  0.8938
+Train time:  1.84959506989 ; Test time:  0.0392429828644
+
