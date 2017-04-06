@@ -5,3 +5,5 @@
 *.lib
 *.a
 *~
+.cache/
+__pycache__/
