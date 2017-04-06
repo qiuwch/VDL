@@ -5,30 +5,26 @@ import tensorflow as tf
 import varm # Load synthetic training images
 import argparse
 
-def load_data():
-    # Convert the rendered data
-    return varm.load_data()
+FLAGS = tf.app.flags.FLAGS  # Define global variables
+tf.app.flags.DEFINE_string('checkpoint_dir', 'tmp', 'Checkpoint directory')
+# tf.app.flags.DEFINE_integer('batch_size', 30, 'Batch size')
 
-def load_batch(batch_size = 50):
-    # return a batch  for training from the synthetic images
-    pass
+def training_batch():
+    # return varm.random_training_batch()
+    return varm.lsp_training_batch()
 
-def inference_graph():
-    return alexnet.inference_graph()
+def inference_graph(images):
+    return alexnet.inference_graph(images)
 
-def loss_op(fc, labels):
-    objective = tf.nn.l2_loss(fc)
-
-    # Compute and apply gradient
+def loss_graph(fc, labels):
+    return alexnet.loss_graph(fc, labels)
 
 def compare(prediction, gt):
     pass
 
-G.checkpoint_dir = 'tmp'
-
 def test(image, gt = None): # Apply the model to predict on an image
     with tf.Session() as sess:
-        ckpt = tf.train.get_checkpoint_state(G.checkpoint_dir)
+        ckpt = tf.train.get_checkpoint_state(FLAGS.checkpoint_dir)
         if ckpt and ckpt.model_checkpoint_path:
             saver.restore(sess, ckpt.model_checkpoint_path)
         else:
@@ -55,38 +51,47 @@ def eval():
     pass
 
 def train_step(loss):
-    train_op = tf.train.AdamOptimizer(1e-4).minimize(loss)
-    return train_op
+    # Compute and apply gradient
+    step_op = tf.train.AdamOptimizer(1e-4).minimize(loss)
+    return step_op
 
 def train():
-    images, labels = load_data()
+    print 'Start training'
+    # images and labels are tensorflow variables, not the actual value
+    image_batch, label_batch = training_batch()
     # labels are 6 numbers, camera pos (3), arm configuration (3)
     # images are with random lighting and random texture color
 
     # Build the inference graph
-    fc = inference_graph(images)
+    fc = inference_graph(image_batch) # Use a fc layer to do regression
 
     # Build the training graph
-    loss = loss_op(fc, labels)
+    loss = loss_graph(fc, label_batch)
 
     train_op = train_step(loss)
+    print 'Start session'
 
     # with tf.train.MonitoredTrainingSession() as sess:
     #     sess.run(train_op)
+    with tf.Session() as sess:
+        train_op.run()
 
-    # Run this within a session
-    for i in range(20000):
-        batch_data = load_batch(50)
-        train_op.run(feed_dict = {image: batch_data[0], label: batch_data[1]})
+    # with tf.Session() as sess:
+    #     # Run this within a session
+    #     for i in range(20000):
+    #         print i
+    #         # batch_data = load_batch(50)
+    #         # train_op.run(feed_dict = {image: batch_data[0], label: batch_data[1]})
+    #         train_op.run()
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train', type=bool, help='Do training')
+    parser.add_argument('--train', type=bool, default=True, help='Do training')
     parser.add_argument('--test', type=bool, help='Do testing')
 
     args = parser.parse_args()
 
-    if args.train():
+    if args.train:
         # Prepare dataset
         train()
 

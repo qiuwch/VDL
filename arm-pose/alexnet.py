@@ -1,6 +1,11 @@
 import tensorflow as tf
 import numpy as np
 
+def loss_graph(fc, labels):
+    diff = tf.subtract(fc, labels)
+    objective = tf.nn.l2_loss(diff)
+    return objective
+
 # This alexnet structure is defined in
 def inference_graph(images):
     with tf.name_scope('conv1') as sc:
@@ -91,3 +96,4 @@ def test_alexnet():
     import varm
     image_batch, label_batch = varm.random_training_batch()
     fc = inference_graph(image_batch) # Use a fc layer to do regression
+    loss = loss_graph(fc, label_batch)
