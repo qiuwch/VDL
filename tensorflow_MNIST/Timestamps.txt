@@ -1,0 +1,51 @@
+## Run sequentially
+
+[vyan1@n001 tensorflow_MNIST]$ python orig_mnist_softmax.py [100 1000]
+0.9211
+Timestamps:  0.787020206451 0.0 2.1836078167 2.97062802315
+
+[vyan1@n001 tensorflow_MNIST]$ python mnist_master.py 10.1.1.13 100 500
+Batch size:  100
+Number of rounds per machine:  500
+Total number of rounds:  1000
+Accuracy:  0.9139
+Timestamps:  0.707139015198 0.00037693977356 63.6440589428 64.3515748978
+
+[vyan1@n003 tensorflow_MNIST]$ python mnist_worker.py 100 500
+Batch size:  100
+Number of rounds per machine:  500
+Total number of rounds:  1000
+Accuracy:  0.9139
+Timestamps:  0.562910795212 4.61374616623 61.5339448452 66.7106018066
+
+
+[vyan1@n001 tensorflow_MNIST]$ python orig_mnist_softmax.py [1000 100]
+0.9007
+Timestamps:  0.708116054535 0.0 1.10734796524 1.81546401978
+
+[vyan1@n003 tensorflow_MNIST]$ python mnist_worker.py 1000 50
+Extracting ./input_data/train-images-idx3-ubyte.gz
+Extracting ./input_data/train-labels-idx1-ubyte.gz
+Extracting ./input_data/t10k-images-idx3-ubyte.gz
+Extracting ./input_data/t10k-labels-idx1-ubyte.gz
+Batch size:  1000
+Number of rounds per machine:  50
+Total number of rounds:  100
+Accuracy:  0.9001
+Timestamps:  0.554878950119 1.14899015427 3.25645494461 4.960324049
+
+[vyan1@n001 tensorflow_MNIST]$ python mnist_master.py 10.1.1.13 1000 50
+Extracting ./input_data/train-images-idx3-ubyte.gz
+Extracting ./input_data/train-labels-idx1-ubyte.gz
+Extracting ./input_data/t10k-images-idx3-ubyte.gz
+Extracting ./input_data/t10k-labels-idx1-ubyte.gz
+Batch size:  1000
+Number of rounds per machine:  50
+Total number of rounds:  100
+Accuracy:  0.9001
+Timestamps:  0.716289997101 0.00031590461731 5.28824210167 6.00484800339
+
+
+
+
+## Run concurrently

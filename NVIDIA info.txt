@@ -1,0 +1,6 @@
+NVRM version: NVIDIA UNIX x86_64 Kernel Module  375.26  Thu Dec  8 18:36:43 PST 2016
+GCC version:  gcc version 4.4.7 20120313 (Red Hat 4.4.7-17) (GCC)
+
+
+[vyan1@n001 vyan1]$ uname -r
+2.6.32-642.13.2.el6.x86_64
