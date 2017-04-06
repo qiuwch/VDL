@@ -5,6 +5,10 @@
 *.lib
 *.a
 *~
+
+.cache/
+__pycache__/
+
 local/
 tensorflow_MNIST/input_data
 tensorflow_MNIST/test

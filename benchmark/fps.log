@@ -1,0 +1,26 @@
+[2017-04-05 23:22:53,095] Making new env: CartPole-v0
+FPS 124823
+FPS 130793
+FPS 130743
+FPS 138392
+[2017-04-05 23:22:58,099] Making new env: Breakout-v0
+FPS 1732
+FPS 1557
+FPS 1676
+FPS 1661
+FPS 1615
+[2017-04-05 23:23:03,144] Making new env: Hopper-v1
+FPS 4826
+FPS 4916
+FPS 4896
+FPS 4866
+[2017-04-05 23:23:08,314] Making new env: Humanoid-v1
+FPS 1573
+FPS 1584
+FPS 1565
+FPS 1573
+[2017-04-05 23:23:13,319] Making new env: ppaquette/DoomDeathmatch-v0
+FPS 540
+FPS 526
+FPS 544
+FPS 554

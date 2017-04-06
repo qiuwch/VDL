@@ -1,7 +1,13 @@
 # Report the fps of each openai gym environments
 # TODO: Check whether my way of checking fps is valid?
 import gym
-import time
+import time, argparse
+env_names = ['CartPole-v0', 'Breakout-v0', 'Hopper-v1', 'Humanoid-v1']
+try:
+    import ppaquette_gym_doom
+    env_names.append('ppaquette/DoomDeathmatch-v0')
+except:
+    pass
 
 class FPSCounter():
     '''
@@ -61,7 +67,9 @@ def run_env(env_name):
         # env.render()
         action = env.action_space.sample() # Get a random action
         # action = get_an_intelligent_action()
-        [obs, reward] = env.step(action) # actor/environment process 2, openai gym
+        [obs, reward, done, info] = env.step(action) # actor/environment process 2, openai gym
+        if done:
+            env.reset()
         # Learn based on obs and reward
         # learn(obs, reward) # learn process 1. tensorflow
 
@@ -74,5 +82,15 @@ if __name__ == '__main__':
     # env_name = 'Breakout-v0'
     # env_name = 'Hopper-v1'
     # env_name = 'Humanoid-v1'
-    env_name = 'CarRacing-v0'
-    run_env(env_name)
+    # env_name = 'CarRacing-v0'
+    # run_env(env_name)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--env')
+    args = parser.parse_args()
+
+    if not args.env:
+        for env_name in env_names:
+            run_env(env_name)
+    else:
+        run_env(args.env)

@@ -1,1 +1,13 @@
-1. Compare the speed between virtual environments, from very simple to very complex.
+Compare the speed between virtual environments, from very simple to very complex.
+
+The list includes:
+
+- [CartPole-v0](https://gym.openai.com/envs#classic_control)
+- [Breakout-v0](https://gym.openai.com/envs#atari)
+- [Hopper-v1](https://gym.openai.com/envs#mujoco)
+- [Humanoid-v1](https://gym.openai.com/envs#mujoco)
+- [DoomDeathmatch-v0](https://gym.openai.com/envs#doom)
+
+
+`python obs-stat.py > obs-stat.log 2>&1`   
+`python gym-fps.py > fps.log 2>&1`
