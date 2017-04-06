@@ -2,7 +2,7 @@ import gym
 env_names = ['CartPole-v0', 'Breakout-v0', 'Hopper-v1', 'Humanoid-v1']
 try:
     import ppaquette_gym_doom
-    env_names.append('ppaquette/DoomBasic-v0')
+    env_names.append('ppaquette/DoomDeathmatch-v0')
 except:
     pass
 
