@@ -11,11 +11,12 @@ import argparse
 import sys
 
 import input_data
-
 import tensorflow as tf
 import numpy as np
 import cPickle as pickle
 import time
+
+import Queue
 
 import params
 import socket_util
@@ -24,7 +25,6 @@ import socket_util
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # Disable Tensorflow debugging logs
 np.set_printoptions(threshold=np.nan)
 FLAGS = None
-
 
 def main(_):
   global mnist, sess
@@ -56,10 +56,11 @@ def main(_):
 
 def parse_cmd_args():
   "Parse command line arguments"
-  global batch_size, num_rounds
+  global num_peers, batch_size, num_rounds
   
-  batch_size = int(sys.argv[1]);
-  num_rounds = int(sys.argv[2]);
+  num_peers = int(sys.argv[1]);
+  batch_size = int(sys.argv[2]);
+  num_rounds = int(sys.argv[3]);
 
 def create_model():
   "Create the Tensorflow model for MNIST task"
@@ -88,10 +89,12 @@ def create_model():
   
 def train():
   "Train the Tensorflow MNIST model"
+  global rcv_msg_num, msg_sent
   
-  for _ in range(num_rounds):
-    #print('Round', _)
-    
+  inc_msg_q = Queue.Queue()
+  rcv_msg_num = msg_sent = 0
+  
+  for _ in range(num_rounds):  
     # Skip one batch
     mnist.train.next_batch(batch_size)
     
@@ -107,29 +110,19 @@ def train():
     delta_W = W_new - W_old
     delta_b = b_new - b_old
     
-    # Receive delta_W, delta_b from the other side
-    #print ('Receiving data...')
-    other_deltas_data_len_pkt, addr = sock.recvfrom(params.MAX_PACKET_SIZE)
-    #print ('H1', other_deltas_data_len_pkt[0:3], addr)
-    while other_deltas_data_len_pkt[0 : params.LEN_IMAGE_SIZE_PACKET_TAG] != params.IMAGE_SIZE_PACKET_TAG \
-        or addr[0] == self_IP:
-        other_deltas_data_len_pkt, addr = sock.recvfrom(params.MAX_PACKET_SIZE)
-        #print ('H2', other_deltas_data_len_pkt[0:3], addr)
-    other_deltas_data_len = int(other_deltas_data_len_pkt[params.LEN_IMAGE_SIZE_PACKET_TAG :])
-    other_deltas_data = socket_util.socket_recv_chucked_data(sock, other_deltas_data_len, self_IP)
-    if other_deltas_data == None:
-        other_deltas = (tf.zeros([784, 10]), tf.zeros([10]))
-    else:
-        other_deltas = pickle.loads(other_deltas_data)
-    other_delta_W, other_delta_b = other_deltas
-    #print ('Receiving done.')
-    
     # Send delta_W, delta_b to the other side
-    #print ('Sending data...')
     deltas = delta_W, delta_b
     deltas_data = pickle.dumps(deltas, -1)
-    socket_util.socket_send_data_chucks(sock, deltas_data, mcast_destination)
-    #print ('Sending done.')
+    msg_sent = socket_util.socket_send_data_chucks(sock, deltas_data, mcast_destination, msg_sent)
+    
+    # Receive delta_W, delta_b from the other side
+    rcv_msg_num = socket_util.socket_recv_chucked_data(sock, self_IP, inc_msg_q, num_peers, rcv_msg_num)
+    try:
+        other_deltas_data = inc_msg_q.get(False)
+    except Queue.Empty:
+        continue
+    other_deltas = pickle.loads(other_deltas_data)
+    other_delta_W, other_delta_b = other_deltas
   
     # Update own model based on delta_W, delta_b from the other side
     W.assign(W + other_delta_W).eval()
@@ -149,9 +142,9 @@ def print_results():
   
   print("Batch size: ", batch_size)
   print("Number of rounds per machine: ", num_rounds)
-  print("Msg received = ", "; lost rate = ")
-  num_machines = 2 # TODO variable
-  print("Total number of rounds: ", num_rounds * num_machines)
+  print("Total number of rounds: ", num_rounds * num_peers)
+  exp_msg_num = msg_sent * (num_peers - 1);
+  print("Msg received = ", rcv_msg_num, "; Msg expected = ", exp_msg_num, "; lost rate = ", 1 - (rcv_msg_num * 1.0 / exp_msg_num) )
   print("Accuracy: ", accuracy)
   print("Timestamps: ", t1-t0, t2-t1, t3-t2, t3-t0)
   

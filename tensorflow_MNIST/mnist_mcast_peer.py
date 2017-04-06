@@ -56,11 +56,12 @@ def main(_):
 
 def parse_cmd_args():
   "Parse command line arguments"
-  global num_peers, batch_size, num_rounds
+  global num_peers, my_peer_ID, batch_size, num_rounds
   
   num_peers = int(sys.argv[1]);
-  batch_size = int(sys.argv[2]);
-  num_rounds = int(sys.argv[3]);
+  my_peer_ID = int(sys.argv[2]) - 1;
+  batch_size = int(sys.argv[3]);
+  num_rounds = int(sys.argv[4]);
   
 def create_model():
   "Create the Tensorflow model for MNIST task"
@@ -95,14 +96,15 @@ def train():
   rcv_msg_num = msg_sent = 0
   
   for _ in range(num_rounds):    
-    # Run one training step
+    # Run one training step, training on only every <num_peers> batch
     W_old = sess.run(W)
     b_old = sess.run(b)
-    batch_xs, batch_ys = mnist.train.next_batch(batch_size)
+    for i in xrange(num_peers):
+        if i == my_peer_ID:
+            batch_xs, batch_ys = mnist.train.next_batch(batch_size)
+        else: # skip this batch
+            mnist.train.next_batch(batch_size)   
     sess.run(train_step, feed_dict={x: batch_xs, y_: batch_ys})
-    
-    # Skip one batch
-    mnist.train.next_batch(batch_size)
     
     # Find delta_W, delta_b
     W_new = sess.run(W)

@@ -61,51 +61,71 @@ def await_start_mcast(sock):
     print('Signal received.')
     
 
-def socket_send_data_chucks(sock, data, mcast_destination):
+def socket_send_data_chucks(sock, data, mcast_destination, msg_sent):
     '''
     Send a data string, fragmented as chucks, to a multicast address
     @params sock The socket to use
     @params data The data string
     @params mcast_destination Destination multicast address
+    @param msg_sent Total number of messages sent before this call
+    @return Total number of messages sent after this call
     '''
     
     # Send tag "Arnold" followed by data length
     sock.sendto(params.IMAGE_SIZE_PACKET_TAG + str(len(data)), mcast_destination)
+    msg_sent += 1
     
     for i in xrange(0, sys.getsizeof(data), params.MAX_PACKET_SIZE):
         data_chuck = data[i : i + params.MAX_PACKET_SIZE]
         sock.sendto(data_chuck, mcast_destination)
+        msg_sent += 1
 
+    return msg_sent
 
-def socket_recv_chucked_data(sock, data_len, self_IP):
+def socket_recv_chucked_data(sock, self_IP, queue, num_peers, rcv_msg_num):
     '''
     Let the socket receive chucked data with a given total length. Retry receiving if packets
     are incomplete, but return null if timeout. Ignore packets sent by self
     @params sock The socket to use
-    @param data_len The total length
     @param self_IP The IP address of self
-    @return The original unchucked data string, or null if timeout
+    @param queue The queue to store the original data
+    @param num_peers Number of mulitcast peers
+    @param rcv_msg_num Total number of messages received from other peers before this call
+    @return Total number of messages received from other peers after this call
     '''
-
-    sock.settimeout(None)
-    data_remaining = data_len
-    orig_data = ""
-    while data_remaining > 0:
-        try:
-            recv_data_len = min(data_remaining, params.MAX_PACKET_SIZE)
-            sock.settimeout(0.3)
-            chuck, addr = sock.recvfrom(recv_data_len)
-            #print ('L1', chuck[0:3], addr)
-            while addr[0] == self_IP:
-                chuck, addr = sock.recvfrom(recv_data_len)
-                #print ('L2', chuck[0:3], addr)
-            if chuck[0 : params.LEN_IMAGE_SIZE_PACKET_TAG] == params.IMAGE_SIZE_PACKET_TAG:
-                return socket_recv_chucked_data(int(chuck[params.LEN_IMAGE_SIZE_PACKET_TAG :]))
-            orig_data += chuck
-            data_remaining -= recv_data_len
-            sock.settimeout(None)
-        except socket.timeout:
-            print('socket_recv_chucked_data timed out')
-            return None
-
-    return orig_data
+    
+    addr_dict = {}  # IP_addr   -> [data_remaining, recovering_data]
+                    # 10.1.1.13 -> [4, "Hello W"]
+    
+    sock.settimeout(params.SOCK_TIMEOUT_VAL)
+    queue_cnt = 0
+    try:
+        while queue_cnt < num_peers - 1:  # until received message from all other peers
+            msg, (addr, port) = sock.recvfrom(params.MAX_PACKET_SIZE)
+            rcv_msg_num += 1
+            if addr == self_IP:
+                rcv_msg_num -= 1
+                continue
+            elif addr not in addr_dict  or  addr_dict[addr][0] == 0:
+                # if no "Arnold":
+                if msg[0 : params.LEN_IMAGE_SIZE_PACKET_TAG] != params.IMAGE_SIZE_PACKET_TAG:
+                    continue
+                else:
+                    data_len = int(msg[params.LEN_IMAGE_SIZE_PACKET_TAG :])
+                    addr_dict[addr] = [data_len, '']
+            else:
+                # if "Arnold":
+                if msg[0 : params.LEN_IMAGE_SIZE_PACKET_TAG] == params.IMAGE_SIZE_PACKET_TAG:
+                    data_len = int(msg[params.LEN_IMAGE_SIZE_PACKET_TAG :])
+                    addr_dict[addr] = [data_len, '']
+                else:
+                    addr_dict[addr][0] -= len(msg)
+                    addr_dict[addr][1] += msg
+                    if addr_dict[addr][0] == 0:
+                        queue.put(addr_dict[addr][1])
+                        queue_cnt += 1
+                        addr_dict[addr] = [0, '']               
+    except socket.timeout:
+        print('socket_recv_chucked_data timed out')
+    
+    return rcv_msg_num
