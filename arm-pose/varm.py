@@ -11,6 +11,46 @@ tf.app.flags.DEFINE_integer('batch_size', 30, 'Batch size')
 def test_data():
     pass
 
+def lsp_testing_batch():
+    # Read image from hard disk and shuffle them
+
+    img_filename_queue = tf.train.string_input_producer(
+        tf.train.match_filenames_once("lsp_dataset/images/*.jpg"), name="filename_queue")
+
+    image_reader = tf.WholeFileReader(name="image_reader")
+    image_name, image_file = image_reader.read(img_filename_queue)
+    image = tf.image.decode_jpeg(image_file, channels=3)
+
+    #resize the image
+    image = tf.image.resize_image_with_crop_or_pad(image, 128, 128)
+    image = tf.cast(image, tf.float32)
+
+    # image.set_shape((128, 128, 3))
+
+    # label = tf.FIFOQueue(99, [tf.float32, tf.float32, tf.float32, tf.float32, tf.float32, tf.float32], shapes=None)
+    # q.enqueue([0, 0, 0, 0, 0, 0]).run()
+    # label.close()
+
+    label_filename_queue = tf.train.string_input_producer(["lsp_dataset/testpos.csv"])
+    reader = tf.TextLineReader()
+    key, value = reader.read(label_filename_queue)
+    record_defaults = [[0.0], [0.0], [0.0], [0.0], [0.0], [0.0]]
+    c1, c2, c3, c4, c5, c6 = tf.decode_csv(value, record_defaults=record_defaults)
+    label = tf.stack([c1, c2, c3, c4, c5, c6])
+
+    # Generate batch
+    num_preprocess_threads = 1
+    min_queue_examples = 10
+    image_batch = tf.train.shuffle_batch(
+        [image],
+        batch_size = FLAGS.batch_size,
+        num_threads=num_preprocess_threads,
+        capacity=min_queue_examples + 3 * FLAGS.batch_size,
+        min_after_dequeue=min_queue_examples,
+        name="images")
+
+    return image_batch
+
 def lsp_training_batch():
     # Read image from hard disk and shuffle them
 

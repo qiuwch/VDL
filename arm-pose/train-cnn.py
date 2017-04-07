@@ -13,6 +13,9 @@ def training_batch():
     # return varm.random_training_batch()
     return varm.lsp_training_batch()
 
+def testing_batch():
+    return varm.lsp_testing_batch()
+
 def inference_graph(images):
     return alexnet.inference_graph(images)
 
@@ -22,7 +25,8 @@ def loss_graph(fc, labels):
 def compare(prediction, gt):
     pass
 
-def test(image, gt = None): # Apply the model to predict on an image
+def test(): # Apply the model to predict on an image
+    print 'Start testing'
     with tf.Session() as sess:
         ckpt = tf.train.get_checkpoint_state(FLAGS.checkpoint_dir)
         if ckpt and ckpt.model_checkpoint_path:
@@ -30,22 +34,28 @@ def test(image, gt = None): # Apply the model to predict on an image
         else:
             print('No checkpoint file found')
 
+        # images and labels are tensorflow variables, not the actual value
+        image_batch = testing_batch()
+        # labels are 6 numbers, camera pos (3), arm configuration (3)
+        # images are with random lighting and random texture color
+
+        # Build the inference graph
+        fc = inference_graph(image_batch) # Use a fc layer to do regression
+
+        with tf.Session() as sess:
+            sess.run(fc)
+
         # Run the testing on an image and output the estimation for this image
         # Should be used for debug, demo
-
-        # Output the arm pose
-        inference_op = inference_graph()
         # prediction = run(inference_op, image)
-        prediction = sess.run([inference_op])
+        # prediction = sess.run([inference_op])
 
         # Apply inference op to the input image
-        if gt:
-            # Compare the prediction with gt
-            print compare(prediction, gt)
+        # if gt:
+        #     # Compare the prediction with gt
+        #     print compare(prediction, gt)
 
-        pass
-
-def eval():
+def demo():
     # Evaluation on testing data
     # Create an evaluation op and use session to run this op
     pass
@@ -56,7 +66,6 @@ def train_step(loss):
     return step_op
 
 def train():
-    print 'Start training'
     # images and labels are tensorflow variables, not the actual value
     image_batch, label_batch = training_batch()
     # labels are 6 numbers, camera pos (3), arm configuration (3)
@@ -86,17 +95,18 @@ def train():
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train', type=bool, default=True, help='Do training')
-    parser.add_argument('--test', type=bool, help='Do testing')
+    parser.add_argument('--train', action='store_true', default=True, help='Do training')
+    parser.add_argument('--test', action='store_true', help='Do testing')
 
     args = parser.parse_args()
 
+    if args.test:
+        test()
+        return
+
     if args.train:
-        # Prepare dataset
         train()
 
-    if args.test():
-        test()
 
 def test_load_batch():
     pass
