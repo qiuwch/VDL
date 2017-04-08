@@ -5,10 +5,15 @@
 *.lib
 *.a
 *~
+*.zip
 
+.ignore/
 .cache/
 __pycache__/
 
 local/
 tensorflow_MNIST/input_data
 tensorflow_MNIST/test
+
+arm-pose/lsp_dataset
+arm-pose/MNIST_data
