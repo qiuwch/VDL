@@ -4,6 +4,7 @@ import alexnet # Load alexnet network structure
 import tensorflow as tf
 import varm # Load synthetic training images
 import argparse
+import numpy as np
 
 FLAGS = tf.app.flags.FLAGS  # Define global variables
 tf.app.flags.DEFINE_string('checkpoint_dir', 'tmp', 'Checkpoint directory')
@@ -13,14 +14,6 @@ def training_batch():
     # return varm.random_training_batch()
     return varm.lsp_training_batch()
 
-def inference_graph(images):
-    return alexnet.inference_graph(images)
-
-def loss_graph(fc, labels):
-    return alexnet.loss_graph(fc, labels)
-
-def compare(prediction, gt):
-    pass
 
 def test(image, gt = None): # Apply the model to predict on an image
     with tf.Session() as sess:
@@ -43,63 +36,42 @@ def test(image, gt = None): # Apply the model to predict on an image
             # Compare the prediction with gt
             print compare(prediction, gt)
 
-        pass
-
 def eval():
     # Evaluation on testing data
     # Create an evaluation op and use session to run this op
     pass
 
-def train_step(loss):
-    # Compute and apply gradient
-    step_op = tf.train.AdamOptimizer(1e-4).minimize(loss)
-    return step_op
-
 def train():
-    print 'Start training'
-    # images and labels are tensorflow variables, not the actual value
-    image_batch, label_batch = training_batch()
     # labels are 6 numbers, camera pos (3), arm configuration (3)
     # images are with random lighting and random texture color
+    net = alexnet.AlexNet()
+    data = varm.RandomDataset()
 
-    # Build the inference graph
-    fc = inference_graph(image_batch) # Use a fc layer to do regression
+    [image_batch, label_batch] = net.input_graph()
+    fc = net.inference_graph(image_batch) # Use a fc layer to do regression
+    loss = net.loss_graph(fc, label_batch)
+    train_op = net.train_step(loss)
 
-    # Build the training graph
-    loss = loss_graph(fc, label_batch)
-
-    train_op = train_step(loss)
-    print 'Start session'
-
-    # with tf.train.MonitoredTrainingSession() as sess:
-    #     sess.run(train_op)
     with tf.Session() as sess:
-        train_op.run()
-
-    # with tf.Session() as sess:
-    #     # Run this within a session
-    #     for i in range(20000):
-    #         print i
-    #         # batch_data = load_batch(50)
-    #         # train_op.run(feed_dict = {image: batch_data[0], label: batch_data[1]})
-    #         train_op.run()
+        sess.run(tf.global_variables_initializer())
+        for i in range(2000):
+            batch = data.next_train_batch(100)
+            train_op.run(feed_dict = {image_batch: batch[0], label_batch: batch[1]})
+            tf.Print(loss, [loss], 'Iter %d, Loss=' % i).eval(feed_dict = {image_batch: batch[0], label_batch: batch[1]})
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train', type=bool, default=True, help='Do training')
-    parser.add_argument('--test', type=bool, help='Do testing')
+    parser.add_argument('--train', action='store_true', default=True, help='Do training')
+    parser.add_argument('--test', action='store_true', help='Do testing')
 
     args = parser.parse_args()
+
+    if args.test:
+        test()
 
     if args.train:
         # Prepare dataset
         train()
-
-    if args.test():
-        test()
-
-def test_load_batch():
-    pass
 
 
 if __name__ == '__main__':
