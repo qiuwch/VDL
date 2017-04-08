@@ -12,7 +12,6 @@ tf.app.flags.DEFINE_integer('batch_size', 30, 'Batch size')
 class Varm(Dataset):
     pass
 
-
 class RandomDataset(Dataset):
     def next_train_batch(self, size):
         image = np.random.normal(size=[size,128,128,3])
