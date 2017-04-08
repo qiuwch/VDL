@@ -1,5 +1,5 @@
 from unrealcv import client
-import random, time, math, json, shutil, os
+import random, time, math, json, shutil, os, sys
 
 def random_arm_pose():
     base = random.randint(-40, 40)
@@ -52,7 +52,7 @@ def save_gt(output_file, gt):
         json.dump(gt, f)
 
 def main(num_image):
-    folders = ['label', 'img']
+    folders = ['data/label', 'data/img']
     for f in folders:
         if not os.path.isdir(f):
             os.mkdir(f)
@@ -67,10 +67,10 @@ def main(num_image):
         # print [base, upper, lower]
         gt = dict(base=base, upper=upper, lower=lower, elevation=elevation, azimuth=azimuth, dist=dist)
 
-        image_filename = 'img/%06d.png' % frameid
+        image_filename = 'data/img/%06d.png' % frameid
         save_frame(image_filename)
 
-        gt_filename = 'label/%06d.json' % frameid
+        gt_filename = 'data/label/%06d.json' % frameid
         save_gt(gt_filename, gt)
         time.sleep(1)
 
