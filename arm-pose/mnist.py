@@ -45,7 +45,9 @@ def train_mnist():
     net = MNIST_Linear()
     data = MNIST()
 
+    # Use place holder for data
     [image_batch, label_batch] = net.input_graph()
+    # Build the inference graph
     prediction = net.inference_graph(image_batch)
     loss = net.loss_graph(prediction, label_batch)
     train_op = net.train_step(loss)
