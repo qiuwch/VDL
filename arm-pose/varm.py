@@ -1,55 +1,68 @@
 # Provides the split of training and validation data
-import json # The label is stored as a json file
-import cv2 # Read images
+import json, cv2 # The label is stored as a json file
 import tensorflow as tf
+from base import Dataset
+import numpy as np
 
 FLAGS = tf.app.flags.FLAGS  # Define global variables
 tf.app.flags.DEFINE_integer('batch_size', 30, 'Batch size')
 # What if I have a duplicate definition for FLAGS?
 
-# Split data into training, val and test
-def test_data():
+
+class Varm(Dataset):
     pass
 
-def lsp_training_batch():
-    # Read image from hard disk and shuffle them
 
-    img_filename_queue = tf.train.string_input_producer(
-        tf.train.match_filenames_once("lsp_dataset/images/*.jpg"), name="filename_queue")
+class RandomDataset(Dataset):
+    def next_train_batch(self, size):
+        image = np.random.normal(size=[size,128,128,3])
+        label = np.random.normal(size=[size,6])
+        return [image, label]
 
-    image_reader = tf.WholeFileReader(name="image_reader")
-    image_name, image_file = image_reader.read(img_filename_queue)
-    image = tf.image.decode_jpeg(image_file, channels=3)
+    def test_set(self):
+        pass
 
-    #resize the image
-    image = tf.image.resize_image_with_crop_or_pad(image, 128, 128)
-    image = tf.cast(image, tf.float32)
 
-    # image.set_shape((128, 128, 3))
+class LSPDataset(Dataset):
+    def next_train_batch(self, size):
+        # Read image from hard disk and shuffle them
 
-    # label = tf.FIFOQueue(99, [tf.float32, tf.float32, tf.float32, tf.float32, tf.float32, tf.float32], shapes=None)
-    # q.enqueue([0, 0, 0, 0, 0, 0]).run()
-    # label.close()
+        img_filename_queue = tf.train.string_input_producer(
+            tf.train.match_filenames_once("lsp_dataset/images/*.jpg"), name="filename_queue")
 
-    label_filename_queue = tf.train.string_input_producer(["lsp_dataset/testpos.csv"])
-    reader = tf.TextLineReader()
-    key, value = reader.read(label_filename_queue)
-    record_defaults = [[0.0], [0.0], [0.0], [0.0], [0.0], [0.0]]
-    c1, c2, c3, c4, c5, c6 = tf.decode_csv(value, record_defaults=record_defaults)
-    label = tf.stack([c1, c2, c3, c4, c5, c6])
+        image_reader = tf.WholeFileReader(name="image_reader")
+        image_name, image_file = image_reader.read(img_filename_queue)
+        image = tf.image.decode_jpeg(image_file, channels=3)
 
-    # Generate batch
-    num_preprocess_threads = 1
-    min_queue_examples = 10
-    image_batch, label_batch = tf.train.shuffle_batch(
-        [image, label],
-        batch_size = FLAGS.batch_size,
-        num_threads=num_preprocess_threads,
-        capacity=min_queue_examples + 3 * FLAGS.batch_size,
-        min_after_dequeue=min_queue_examples,
-        name="images")
+        #resize the image
+        image = tf.image.resize_image_with_crop_or_pad(image, 128, 128)
+        image = tf.cast(image, tf.float32)
 
-    return image_batch, label_batch
+        # image.set_shape((128, 128, 3))
+
+        # label = tf.FIFOQueue(99, [tf.float32, tf.float32, tf.float32, tf.float32, tf.float32, tf.float32], shapes=None)
+        # q.enqueue([0, 0, 0, 0, 0, 0]).run()
+        # label.close()
+
+        label_filename_queue = tf.train.string_input_producer(["lsp_dataset/testpos.csv"])
+        reader = tf.TextLineReader()
+        key, value = reader.read(label_filename_queue)
+        record_defaults = [[0.0], [0.0], [0.0], [0.0], [0.0], [0.0]]
+        c1, c2, c3, c4, c5, c6 = tf.decode_csv(value, record_defaults=record_defaults)
+        label = tf.stack([c1, c2, c3, c4, c5, c6])
+
+        # Generate batch
+        num_preprocess_threads = 1
+        min_queue_examples = 10
+        image_batch, label_batch = tf.train.shuffle_batch(
+            [image, label],
+            batch_size = FLAGS.batch_size,
+            num_threads=num_preprocess_threads,
+            capacity=min_queue_examples + 3 * FLAGS.batch_size,
+            min_after_dequeue=min_queue_examples,
+            name="images")
+
+        return image_batch, label_batch
 
 def random_training_batch():
     # Convert the rendered data
