@@ -6,7 +6,10 @@ import varm # Load synthetic training images
 import argparse, random
 import numpy as np
 import ipdb
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt
+except:
+    pass
 
 FLAGS = tf.app.flags.FLAGS  # Define global variables
 tf.app.flags.DEFINE_string('checkpoint_dir', 'tmp', 'Checkpoint directory')
@@ -56,8 +59,8 @@ def train():
     # images are with random lighting and random texture color
     net = alexnet.AlexNet()
     # net = alexnet.LinearToy()
-    data = varm.RandomDataset()
-    # data = varm.VarmDataset()
+    # data = varm.RandomDataset()
+    data = varm.VarmDataset()
 
     [image_batch, label_batch] = net.input_graph()
     fc = net.inference_graph(image_batch) # Use a fc layer to do regression
@@ -78,7 +81,7 @@ def train():
             # if i % 100 == 0:
             tf.Print(loss, [loss], 'Iter %d, Loss=' % i).eval(feed_dict = {image_batch: batch[0], label_batch: batch[1]})
 
-            if False:
+            if True:
                 test_id = random.randrange(1000)
                 test_img = np.zeros((1, 256, 256, 3))
                 raw_im = data._read_image(test_id)
