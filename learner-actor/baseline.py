@@ -7,22 +7,7 @@ import time
 task = sys.argv[1]
 
 t0 = time.time()
-#server_host = 'localhost'
-#server_port = 10090
 
-#clientSocket = socket(AF_INET, SOCK_STREAM)
-#clientSocket.connect((server_host, server_port))
-
-# def send_us(observation, reward):
-#     ob_len = len(str(observation))
-#     print 'ob_len:' + str(ob_len)
-#     clientSocket.send(str(ob_len) + ' o ' + str(observation))
-#
-#     re_len = len(str(reward))
-#     print 're_len:' + str(re_len)
-#     clientSocket.send('0' + str(re_len) + ' r ' + str(reward))
-#     return
-#
 env = gym.make(task)
 for i_episode in range(20):
     observation = env.reset()
@@ -44,4 +29,3 @@ t1 = time.time()
 print (t1-t0)
 #clientSocket.send('over')
 #clientSocket.close()
-
