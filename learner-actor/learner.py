@@ -7,6 +7,10 @@ import gym
 
 num_actors, task = int(sys.argv[1]), sys.argv[2]
 
+def log(msg): # Use log function, so that I am able to disable the verbose output
+    # print(msg)
+    pass
+
 k = 1400
 def frag_recv(mess_len, sock):
     mess_remain = mess_len
@@ -45,28 +49,22 @@ while True:
                 #time.sleep(0.05)
                 raw_message_len = connectionSocket[i].recv(4)
                 if raw_message_len:
-                    if raw_message_len == 'over':
-                        print raw_message_len
-                        ACTOR[i] = False
-                    else:
-                        message_len = struct.unpack('I', raw_message_len)[0]
-                        print message_len
-                        message = frag_recv((message_len+2), connectionSocket[i])
-                        if message.split('_')[0] == 'o':
-                            observation = message.split('_')[1]
-                            print 'ob_%d:' % i + str(observation)
-                        if message.split('_')[0] == 'r':
-                            reward = message.split('_')[1]
-                            print 're_%d:' % i + str(reward)
-                            connectionSocket[i].send(struct.pack('I', action))
-            except socket.error:
-                pass
-                #err = e.args[0]
-                #if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
-                    #pass
-                #else:
-		    #pass
-                    #ACTOR[i] = False
+                    message_len = struct.unpack('I', raw_message_len)[0]
+                    log(message_len)
+                    message = frag_recv((message_len+2), connectionSocket[i])
+                    if message.split('_')[0] == 'o':
+                        observation = message.split('_')[1]
+                        log('ob_%d:' % i + str(observation))
+                    if message.split('_')[0] == 'r':
+                        reward = message.split('_')[1]
+                        log('re_%d:' % i + str(reward))
+                        connectionSocket[i].send(struct.pack('I', action))
+            except socket.error, e:
+                err = e.args[0]
+                if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
+                    pass
+                else:
+                    ACTOR[i] = False
 
     if any(ACTOR):
         pass
