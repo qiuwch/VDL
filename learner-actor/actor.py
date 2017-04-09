@@ -42,8 +42,6 @@ for i_episode in range(10):
 clientSocket.send('over')
 print "over"
 
-while True:
-    pass
 
 #clientSocket.close()
 
