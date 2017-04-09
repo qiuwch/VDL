@@ -1,20 +1,58 @@
 # Provides the split of training and validation data
-import json, cv2 # The label is stored as a json file
+import json, glob # The label is stored as a json file
 import tensorflow as tf
 from base import Dataset
 import numpy as np
+import skimage.io, skimage.transform
 
 FLAGS = tf.app.flags.FLAGS  # Define global variables
 tf.app.flags.DEFINE_integer('batch_size', 30, 'Batch size')
 # What if I have a duplicate definition for FLAGS?
 
 
-class Varm(Dataset):
-    pass
+class VarmDataset(Dataset):
+    def __init__(self):
+        self.cursor = 0
+        self.images = glob.glob('data/img/*.png')
+        self.labels = glob.glob('data/label/*.json')
+        self.num_image = len(self.images)
+        self.w = 256
+        self.h = 256
+
+    def _read_image(self, id):
+        id = id % self.num_image
+        im  = skimage.io.imread(self.images[id])
+        resize_im = skimage.transform.resize(im, [self.h, self.w, 3]) / 256.0
+        return resize_im
+
+
+    def _read_label(self, id):
+        id = id % self.num_image
+        with open(self.labels[id]) as f:
+            d = json.load(f)
+            label = np.array([d['base'], d['upper'], d['lower'], d['dist'], d['elevation'], d['azimuth']])
+        return label
+
+    def next_train_batch(self, size):
+        image_batch = np.zeros((size, self.w, self.h, 3))
+        label_batch = np.zeros((size, 6))
+        for i in range(size):
+            image = self._read_image(self.cursor + i)
+            label = self._read_label(self.cursor + i)
+
+            image_batch[i,:,:,:] = image
+            label_batch[i,:] = label
+
+        self.cursor += size
+        return image_batch, label_batch
+
+    def test_set(self):
+        pass
+
 
 class RandomDataset(Dataset):
     def next_train_batch(self, size):
-        image = np.random.normal(size=[size,128,128,3])
+        image = np.random.normal(size=[size,256,256,3])
         label = np.random.normal(size=[size,6])
         return [image, label]
 
