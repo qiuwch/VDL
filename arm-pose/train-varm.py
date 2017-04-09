@@ -3,8 +3,10 @@
 import alexnet # Load alexnet network structure
 import tensorflow as tf
 import varm # Load synthetic training images
-import argparse
+import argparse, random
 import numpy as np
+import ipdb
+import matplotlib.pyplot as plt
 
 FLAGS = tf.app.flags.FLAGS  # Define global variables
 tf.app.flags.DEFINE_string('checkpoint_dir', 'tmp', 'Checkpoint directory')
@@ -53,19 +55,54 @@ def train():
     # labels are 6 numbers, camera pos (3), arm configuration (3)
     # images are with random lighting and random texture color
     net = alexnet.AlexNet()
+    # net = alexnet.LinearToy()
     data = varm.RandomDataset()
+    # data = varm.VarmDataset()
 
     [image_batch, label_batch] = net.input_graph()
     fc = net.inference_graph(image_batch) # Use a fc layer to do regression
     loss = net.loss_graph(fc, label_batch)
-    train_op = net.train_step(loss)
+    [train_op, grad_step] = net.train_step(loss)
+
+    # grad_step = tf.train.AdamOptimizer(learning_rate = 1e-4).compute_gradients(loss)
+
+    def format_array(arr):
+        return ', '.join(['%7.3f' % v for v in arr])
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         for i in range(2000):
-            batch = data.next_train_batch(100)
-            train_op.run(feed_dict = {image_batch: batch[0], label_batch: batch[1]})
+            # pdb.set_trace()
+            batch = data.next_train_batch(10)
+            sess.run(train_op, feed_dict = {image_batch: batch[0], label_batch: batch[1]})
+            # if i % 100 == 0:
             tf.Print(loss, [loss], 'Iter %d, Loss=' % i).eval(feed_dict = {image_batch: batch[0], label_batch: batch[1]})
+
+            if False:
+                test_id = random.randrange(1000)
+                test_img = np.zeros((1, 256, 256, 3))
+                raw_im = data._read_image(test_id)
+                # plt.imshow(raw_im)
+                # plt.show()
+
+                test_img[0,:,:,:] = raw_im
+                test_label = data._read_label(test_id)
+                prediction = fc.eval(feed_dict = {image_batch: test_img})
+                print 'Iter: %d' % i
+                print 'Prediction: ', format_array(prediction[0])
+                # ipdb.set_trace()
+                print 'GT:         ', format_array(test_label)
+
+
+            if True:
+                grad_vals = sess.run([tf.reduce_sum(tf.abs(grad)) for grad, _ in grad_step], feed_dict={image_batch: batch[0], label_batch: batch[1]})
+
+                var_to_grad = {}
+                for grad_val, (_, var) in zip(grad_vals, grad_step):
+                    var_to_grad[var.name] = grad_val
+                    # print var.name
+                    print var.name, grad_val
+
 
 def main():
     parser = argparse.ArgumentParser()
