@@ -1,13 +1,16 @@
 # Report the fps of each openai gym environments
 # TODO: Check whether my way of checking fps is valid?
 import gym
-import time, argparse
+import time, argparse, sys
 env_names = ['CartPole-v0', 'Breakout-v0', 'Hopper-v1', 'Humanoid-v1']
 try:
     import ppaquette_gym_doom
     env_names.append('ppaquette/DoomDeathmatch-v0')
 except:
     pass
+sys.path.append('../learner-actor')
+import dummy_env
+env_names.append('dummy/OBS1000-FPS60')
 
 class FPSCounter():
     '''
