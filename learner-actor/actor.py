@@ -57,17 +57,15 @@ for i_episode in range(10):
         send_us(observation, reward)
         send_timer.toc()
 
-
         if done:
             log("Episode finished after {} timesteps".format(t+1))
             break
+clientSocket.close()
 
-clientSocket.send('over')
-print "over"
 print send_timer
 print compute_timer
 print throughput_counter
-print 'Speed: %.2fB/s' % (throughput_counter.sum / send_timer.total)
+print 'Speed: %.2fKB/s' % (throughput_counter.sum / send_timer.total / 1000.0)
 
 # Print how much time is spent in the env.step and how much time is spent in sending messages
 
