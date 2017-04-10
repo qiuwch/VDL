@@ -1,5 +1,4 @@
-import sys
-import socket, struct
+import sys, socket, struct, zlib
 import gym
 from util import Timer, Counter
 
@@ -19,12 +18,19 @@ throughput_counter = Counter("Network Throughput")
 def send_payload(connection_socket, payload):
     # Make sure payload is a bytearray
     payload_size = len(payload)
+    throughput_counter.add(payload_size + 1) # +1 for header
     connection_socket.send(struct.pack('I', payload_size))
     connection_socket.send(payload)
 
+def serialize_numpy(arr):
+    # http://stackoverflow.com/questions/30167538/convert-a-numpy-ndarray-to-stringor-bytes-and-convert-it-back-to-numpy-ndarray
+    payload = arr.tostring()
+    payload = zlib.compress(payload)
+    return payload
+
 def send_us(observation, reward):
-    send_payload(clientSocket, str(observation))
-    send_payload(clientSocket, str(reward))
+    send_payload(clientSocket, serialize_numpy(observation))
+    # send_payload(clientSocket, struct.pack('I', reward)) # This is not efficient
 
 env = gym.make(task)
 for i_episode in range(10):
@@ -49,10 +55,6 @@ for i_episode in range(10):
         log('ob:' + str(observation))
         log('re:' + str(reward))
 
-        payload = str(observation) + str(reward)
-        b = bytearray()
-        b.extend(payload)
-        throughput_counter.add(len(b))
         send_timer.tic()
         send_us(observation, reward)
         send_timer.toc()
