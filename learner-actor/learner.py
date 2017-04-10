@@ -46,7 +46,6 @@ while True:
     for i in range(num_actors):
         if ACTOR[i]:
             try:
-                #time.sleep(0.05)
                 raw_message_len = connectionSocket[i].recv(4)
                 if raw_message_len:
                     message_len = struct.unpack('I', raw_message_len)[0]
@@ -76,5 +75,3 @@ print (t1-t0)
 
 for i in range(num_actors):
     serverSocket[i].close()
-
-
