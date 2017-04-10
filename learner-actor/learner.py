@@ -1,77 +1,102 @@
-import sys
-import socket, struct
-import time
-import errno
-
+import sys, socket, struct, time, errno, atexit, argparse
 import gym
+from util import Counter
+import threading
 
-num_actors, task = int(sys.argv[1]), sys.argv[2]
+parser = argparse.ArgumentParser()
+parser.add_argument('--num_actors', default = 2)
+parser.add_argument('--task', default = 'Breakout-v0')
+parser.add_argument('--port', default = 10000, type=int)
+
+args = parser.parse_args()
+
+env = gym.make(args.task)
+
+class SocketRecvThread(threading.Thread):
+    def __init__(self, connection_socket):
+        super(SocketRecvThread, self).__init__()
+        self.connection_socket = connection_socket
+        self.connected = True
+        self.buffer_size = 1400
+
+    def _recv(self, count):
+        data = None
+        if not self.connected:
+            return data
+        try:
+            data = self.connection_socket.recv(count)
+            if not data:
+                self.connected = False
+        except socket.error, e:
+            self.connected = False
+        return data
+
+    def _frag_recv(self, mess_len):
+        mess_remain = mess_len
+        mess = ''
+        if mess_remain > 0:
+            mess_temp = self._recv(min(mess_remain, self.buffer_size))
+            assert mess_temp != None, 'Mess_len %d, Mess_remain %d' % (mess_len, mess_remain)
+            mess += mess_temp
+            mess_remain -= len(mess_temp)
+        return mess
+
+    def run(self):
+        print 'Thread is running'
+        self._recv_all()
+        # self._recv_simple()
+
+    # def _recv_simple(self):
+    #     while True:
+    #         data = self.connection_socket.recv(1000)
+    #         if not data:
+    #             print 'Done'
+    #             break
+
+    def _recv_all(self):
+        while self.connected:
+            raw_message_len = self._recv(4)
+            if raw_message_len:
+                message_len = struct.unpack('I', raw_message_len)[0]
+                # print message_len
+                message = self._frag_recv(message_len+2)
+                # if message.split('_')[0] == 'o':
+                #     observation = message.split('_')[1]
+                #     # log('ob_%d:' % i + str(observation))
+                # if message.split('_')[0] == 'r':
+                #     reward = message.split('_')[1]
+                    # log('re_%d:' % i + str(reward))
+
+                action = env.action_space.sample() # based on observation and reward
+                self.connection_socket.send(struct.pack('I', action))
+
 
 def log(msg): # Use log function, so that I am able to disable the verbose output
     # print(msg)
     pass
 
-k = 1400
-def frag_recv(mess_len, sock):
-    mess_remain = mess_len
-    mess = ''
-    if mess_remain > 0:
-        mess_temp = sock.recv(min(mess_remain, k))
-        mess += mess_temp
-        mess_remain -= min(mess_remain, k)
-    return mess
+def main():
+    server_port = args.port
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind(('', server_port))
+    server_socket.listen(5)
 
-server_port = range(num_actors)
-serverSocket = range(num_actors)
-ACTOR = [True for _ in range(num_actors)]
-connectionSocket = range(num_actors)
-addr = range(num_actors)
-port_num = 10000
-for i in range(0, num_actors):
-    server_port[i] = (port_num+i)
-    serverSocket[i] = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    serverSocket[i].bind(('', server_port[i]))
-    serverSocket[i].listen(5)
-    connectionSocket[i], addr[i] = serverSocket[i].accept()
-    connectionSocket[i].settimeout(1.0)
+    recv_threads = []
+    for i in range(0, args.num_actors):
+        # Create a new thread to handle data
+        connection_socket, addr = server_socket.accept()
+        recv_thread = SocketRecvThread(connection_socket)
+        recv_threads.append(recv_thread)
 
-env = gym.make(task)
+    for thread in recv_threads:
+        thread.start()
 
-t0 = time.time()
+    t0 = time.time()
+    for thread in recv_threads:
+        thread.join()
+    t1 = time.time()
+    print (t1-t0)
 
-while True:
-    action = env.action_space.sample()
-    #print action
 
-    for i in range(num_actors):
-        if ACTOR[i]:
-            try:
-                raw_message_len = connectionSocket[i].recv(4)
-                if raw_message_len:
-                    message_len = struct.unpack('I', raw_message_len)[0]
-                    log(message_len)
-                    message = frag_recv((message_len+2), connectionSocket[i])
-                    if message.split('_')[0] == 'o':
-                        observation = message.split('_')[1]
-                        log('ob_%d:' % i + str(observation))
-                    if message.split('_')[0] == 'r':
-                        reward = message.split('_')[1]
-                        log('re_%d:' % i + str(reward))
-                        connectionSocket[i].send(struct.pack('I', action))
-            except socket.error, e:
-                err = e.args[0]
-                if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
-                    pass
-                else:
-                    ACTOR[i] = False
-
-    if any(ACTOR):
-        pass
-    else:
-        break
-
-t1 = time.time()
-print (t1-t0)
-
-for i in range(num_actors):
-    serverSocket[i].close()
+if __name__ == '__main__':
+    main()
