@@ -1,12 +1,16 @@
 # A simple script to test the upper bound socket communication speed we can achieve
 import argparse
-import socket, sys
-sys.path.append('..')
+import socket, sys, os
+script_path = os.path.dirname(__file__)
+sys.path.append(os.path.join(script_path, '..'))
 from util import Timer, Counter
 import numpy as np
 
 send_timer = Timer("Communication")
 throughput_counter = Counter("Network Throughput")
+
+packet_size = 100000 # bytes
+packet_count = 1000
 
 port = 10010
 def server():
@@ -25,7 +29,7 @@ def client(server_ip):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((server_ip, port))
 
-    send(client_socket, 1000, 1000)
+    send(client_socket, packet_size, packet_count)
     client_socket.close()
 
 def send(client_socket, size, count):
