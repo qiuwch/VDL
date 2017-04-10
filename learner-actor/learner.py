@@ -20,16 +20,18 @@ class SocketRecvThread(threading.Thread):
         self.buffer_size = 1400
 
     def _recv(self, count):
-        data = None
         if not self.connected:
-            return data
+            return None
         try:
             data = self.connection_socket.recv(count)
             if not data:
                 self.connected = False
+                return None
+            return data
         except socket.error, e:
+            print e
             self.connected = False
-        return data
+            return data
 
     def _frag_recv(self, mess_len):
         mess_remain = mess_len
@@ -58,8 +60,10 @@ class SocketRecvThread(threading.Thread):
             raw_message_len = self._recv(4)
             if raw_message_len:
                 message_len = struct.unpack('I', raw_message_len)[0]
-                # print message_len
                 message = self._frag_recv(message_len+2)
+                # raw_message_len = self._recv(4)
+                # message_len = struct.unpack('I', raw_message_len)[0]
+                # message = self._frag_recv(message_len+2)
                 # if message.split('_')[0] == 'o':
                 #     observation = message.split('_')[1]
                 #     # log('ob_%d:' % i + str(observation))
@@ -67,8 +71,8 @@ class SocketRecvThread(threading.Thread):
                 #     reward = message.split('_')[1]
                     # log('re_%d:' % i + str(reward))
 
-                action = env.action_space.sample() # based on observation and reward
-                self.connection_socket.send(struct.pack('I', action))
+                # action = env.action_space.sample() # based on observation and reward
+                # self.connection_socket.send(struct.pack('I', action))
 
 
 def log(msg): # Use log function, so that I am able to disable the verbose output
