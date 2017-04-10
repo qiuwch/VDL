@@ -1,6 +1,7 @@
 import sys, socket, struct, zlib
 import gym
 from util import Timer, Counter
+import dummy_env
 
 def log(msg):
     # print msg

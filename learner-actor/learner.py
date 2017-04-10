@@ -2,6 +2,7 @@ import sys, socket, struct, time, errno, atexit, argparse
 import gym
 from util import Counter
 import threading
+import dummy_env
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--num_actors', default = 2)
