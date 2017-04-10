@@ -91,7 +91,7 @@ def main():
     for thread in recv_threads:
         thread.join()
     t1 = time.time()
-    print (t1-t0)
+    print 'Total time in learner: ', (t1-t0)
 
 
 if __name__ == '__main__':

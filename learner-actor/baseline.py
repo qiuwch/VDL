@@ -9,7 +9,7 @@ task = sys.argv[1]
 t0 = time.time()
 
 env = gym.make(task)
-for i_episode in range(20):
+for i_episode in range(200):
     observation = env.reset()
     #print observation
     #send_us(observation, 0)
