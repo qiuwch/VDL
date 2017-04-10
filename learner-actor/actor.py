@@ -1,7 +1,7 @@
 import sys
 import socket, struct
-
 import gym
+from util import Timer
 
 def log(msg):
     pass
@@ -10,6 +10,10 @@ server_host, server_port, task = sys.argv[1], int(sys.argv[2]), sys.argv[3]
 
 clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 clientSocket.connect((server_host, server_port))
+
+send_timer = Timer("Communication")
+compute_timer = Timer("Computation")
+
 
 def send_us(observation, reward):
     ob_len = len(str(observation))
@@ -32,19 +36,33 @@ for i_episode in range(10):
         #env.render()
         #action = env.action_space.sample()
         #try:
+        send_timer.tic()
         raw_action = clientSocket.recv(4)
         action = struct.unpack('I', raw_action)[0]
+        send_timer.toc()
+
+        compute_timer.tic()
         observation, reward, done, info = env.step(action)
+        compute_timer.toc()
+
         log('ob:' + str(observation))
         log('re:' + str(reward))
+
+        send_timer.tic()
         send_us(observation, reward)
+        send_timer.toc()
+
+
         if done:
             log("Episode finished after {} timesteps".format(t+1))
             break
 
 clientSocket.send('over')
 print "over"
+print send_timer
+print compute_timer
+
+# Print how much time is spent in the env.step and how much time is spent in sending messages
 
 
 #clientSocket.close()
-
