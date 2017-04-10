@@ -1,10 +1,14 @@
 # Star the learner
 learner_bin=learner.py
-actor_bin=${HOME}/workspace/VDL/VDL/learner-actor/actor.py
+actor_bin=${PWD}/actor.py
 server='127.0.0.1'
-task=Breakout-v0
-# task=Humanoid-v1
 port=10000
+if [ -z $1 ]; then
+    task=Breakout-v0
+else
+    task=$1
+fi
+# task=Humanoid-v1
 
 echo "Start learner"
 python ${learner_bin} --port ${port} &
