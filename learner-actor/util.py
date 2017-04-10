@@ -33,4 +33,4 @@ class Counter:
         self.sum += n
 
     def __str__(self):
-        return "Counter: %s, Sum: %f" % (self.name, self.sum)
+        return "Counter: %s, Sum: %.2f" % (self.name, self.sum)

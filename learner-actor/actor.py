@@ -1,7 +1,7 @@
 import sys
 import socket, struct
 import gym
-from util import Timer
+from util import Timer, Counter
 
 def log(msg):
     pass
@@ -13,6 +13,7 @@ clientSocket.connect((server_host, server_port))
 
 send_timer = Timer("Communication")
 compute_timer = Timer("Computation")
+throughput_counter = Counter("Network Throughput")
 
 
 def send_us(observation, reward):
@@ -48,6 +49,10 @@ for i_episode in range(10):
         log('ob:' + str(observation))
         log('re:' + str(reward))
 
+        payload = str(observation) + str(reward)
+        b = bytearray()
+        b.extend(payload)
+        throughput_counter.add(len(b))
         send_timer.tic()
         send_us(observation, reward)
         send_timer.toc()
@@ -61,6 +66,8 @@ clientSocket.send('over')
 print "over"
 print send_timer
 print compute_timer
+print throughput_counter
+print 'Speed: %.2fB/s' % (throughput_counter.sum / send_timer.total)
 
 # Print how much time is spent in the env.step and how much time is spent in sending messages
 
