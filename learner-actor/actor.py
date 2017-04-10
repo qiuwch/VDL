@@ -16,18 +16,15 @@ send_timer = Timer("Communication")
 compute_timer = Timer("Computation")
 throughput_counter = Counter("Network Throughput")
 
+def send_payload(connection_socket, payload):
+    # Make sure payload is a bytearray
+    payload_size = len(payload)
+    connection_socket.send(struct.pack('I', payload_size))
+    connection_socket.send(payload)
 
 def send_us(observation, reward):
-    ob_len = len(str(observation))
-    log('ob_len:' + str(ob_len))
-    clientSocket.send(struct.pack('I', ob_len))
-    clientSocket.send('o_' + str(observation))
-
-    re_len = len(str(reward))
-    log('re_len:' + str(re_len))
-    clientSocket.send(struct.pack('I', re_len))
-    clientSocket.send('r_' + str(reward))
-    return
+    send_payload(clientSocket, str(observation))
+    send_payload(clientSocket, str(reward))
 
 env = gym.make(task)
 for i_episode in range(10):

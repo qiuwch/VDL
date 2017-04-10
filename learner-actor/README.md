@@ -33,5 +33,6 @@ Speed: 374.24KB/s
 
 ### Version v0.0.3
 
+- Change the serialization code, avoid serialize the data multiple times, which is very expensive.
 - Send `bytearray` instead of `str(obs)`
 - Use multi thread to send message

@@ -46,21 +46,13 @@ class SocketRecvThread(threading.Thread):
     def run(self):
         print 'Thread is running'
         self._recv_all()
-        # self._recv_simple()
-
-    # def _recv_simple(self):
-    #     while True:
-    #         data = self.connection_socket.recv(1000)
-    #         if not data:
-    #             print 'Done'
-    #             break
 
     def _recv_all(self):
         while self.connected:
             raw_message_len = self._recv(4)
             if raw_message_len:
                 message_len = struct.unpack('I', raw_message_len)[0]
-                message = self._frag_recv(message_len+2)
+                message = self._frag_recv(message_len)
                 # raw_message_len = self._recv(4)
                 # message_len = struct.unpack('I', raw_message_len)[0]
                 # message = self._frag_recv(message_len+2)
