@@ -14,7 +14,7 @@ parser.add_argument('--log')
 args = parser.parse_args()
 
 task = args.task
-if task.startswith('dummy'):
+if task and task.startswith('dummy'):
     dummy_env.create(task)
 
 t0 = time.time()

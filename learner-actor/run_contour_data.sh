@@ -2,14 +2,19 @@
 learner_bin=learner.py
 actor_bin=${PWD}/actor.py
 port=10000
+setup_remote="source ${HOME}/.bash_profile"
+${setup_remote}
 
 run_task_fb () # Space is needed
 {
   server='10.1.1.1'
+  echo "Start learner"
   python ${learner_bin} --port ${port} ${learner_args} &
   actor_cmd="python ${actor_bin} ${actor_args} --server_ip ${server} --port ${port}"
-  ssh n001 -f "source ~/.bash_profile; ${actor_cmd}"
-  ssh n003 -f "source ~/.bash_profile; ${actor_cmd}"
+  echo "Start actor1"
+  ssh n001 -f "${setup_remote}; ${actor_cmd}"
+  echo "Start actor2"
+  ssh n003 -f "${setup_remote}; ${actor_cmd}"
   wait $(jobs -p)
 }
 
@@ -42,11 +47,12 @@ run_baseline ()
 #   run_task_local
 # done
 
-for task in CartPole-v0 Breakout-v0 Hopper-v1 Humanoid-v1
+# for task in CartPole-v0 Breakout-v0 Hopper-v1 Humanoid-v1
+for task in Hopper-v1 Humanoid-v1
 # for task in ppaquette/DoomDeathmatch-v0
 do
   # 1. baseline
-  run_baseline
+  # run_baseline
 
   # 2. no compress in fb
   learner_args="--task ${task} --log log/${task}-nocompress-fb.json"
