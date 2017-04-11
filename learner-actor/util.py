@@ -1,4 +1,4 @@
-import time
+import time, errno, os
 
 # Check how much time is spent in computation and communication
 class Timer:
@@ -34,3 +34,12 @@ class Counter:
 
     def __str__(self):
         return "Counter: %s, Sum: %.2f" % (self.name, self.sum)
+
+def mkdirp(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc:  # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise
