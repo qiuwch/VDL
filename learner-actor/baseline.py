@@ -3,6 +3,8 @@ import gym
 import dummy_env
 
 task = sys.argv[1]
+if task.startswith('dummy'):
+    dummy_env.create(task)
 
 t0 = time.time()
 
