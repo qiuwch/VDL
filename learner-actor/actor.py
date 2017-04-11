@@ -1,16 +1,31 @@
-import sys, socket, struct, zlib
+import sys, socket, struct, zlib, argparse
 import gym
 from util import Timer, Counter
 import dummy_env
+try:
+    import ppaquette_gym_doom
+except:
+    pass
 
 def log(msg):
     # print msg
     pass
 
-server_host, server_port, task = sys.argv[1], int(sys.argv[2]), sys.argv[3]
+parser = argparse.ArgumentParser()
+parser.add_argument('--server_ip')
+parser.add_argument('--port', type=int)
+parser.add_argument('--task')
+parser.add_argument('--compress', action='store_true')
+
+args = parser.parse_args()
+server_host = args.server_ip
+server_port = args.port
+task = args.task
 
 clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+print 'ClientSocket is waiting for connection'
 clientSocket.connect((server_host, server_port))
+print 'ClientSocket is connected'
 
 send_timer = Timer("Communication")
 compress_timer = Timer("Compression")
@@ -34,10 +49,13 @@ def serialize_numpy(arr):
 def send_us(observation, reward):
     # It seems this function call takes a unreasonable amount of time
     # Does a deep copy happen in here?
-    compress_timer.tic()
-    payload = serialize_numpy(observation)
-    payload = zlib.compress(payload)
-    compress_timer.toc()
+    if args.compress:
+        compress_timer.tic()
+        payload = serialize_numpy(observation)
+        payload = zlib.compress(payload)
+        compress_timer.toc()
+    else:
+        payload = serialize_numpy(observation)
 
     send_timer.tic()
     send_payload(clientSocket, payload)
