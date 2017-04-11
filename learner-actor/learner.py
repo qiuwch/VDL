@@ -1,13 +1,17 @@
-import sys, socket, struct, time, errno, atexit, argparse
+import sys, socket, struct, time, errno, atexit, argparse, json, threading, datetime
 import gym
 from util import Counter
-import threading
 import dummy_env
+try:
+    import ppaquette_gym_doom
+except:
+    pass
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--num_actors', default = 2)
-parser.add_argument('--task', default = 'Breakout-v0')
+parser.add_argument('--task')
 parser.add_argument('--port', default = 10000, type=int)
+parser.add_argument('--log')
 
 args = parser.parse_args()
 
@@ -78,10 +82,12 @@ def main():
     server_socket.bind(('', server_port))
     server_socket.listen(5)
 
+    client_addrs = []
     recv_threads = []
     for i in range(0, args.num_actors):
         # Create a new thread to handle data
         connection_socket, addr = server_socket.accept()
+        client_addrs.append(addr)
         recv_thread = SocketRecvThread(connection_socket)
         recv_threads.append(recv_thread)
 
@@ -92,8 +98,21 @@ def main():
     for thread in recv_threads:
         thread.join()
     t1 = time.time()
-    print 'Total time in learner: ', (t1-t0)
+    total_time = (t1 - t0)
+    print 'Total time in learner: ', total_time
 
+    # Log is a summary with all the information related to this experiment
+    if args.log:
+        with open(args.log, 'w') as f:
+            log_data = dict(
+                num_actors = args.num_actors,
+                date = str(datetime.datetime.now()),
+                total_time = total_time,
+                task = args.task,
+                client_addrs = client_addrs,
+                mode = 'multi-machine'
+            )
+            json.dump(log_data, f)
 
 if __name__ == '__main__':
     main()
