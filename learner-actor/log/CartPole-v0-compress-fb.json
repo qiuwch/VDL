@@ -1,0 +1,1 @@
+{"total_time": 0.16127300262451172, "task": "CartPole-v0", "mode": "multi-machine", "date": "2017-04-11 03:14:31.247340", "num_actors": 2, "client_addrs": [["10.1.1.11", 34826], ["10.1.1.13", 55396]]}
