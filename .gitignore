@@ -17,3 +17,5 @@ tensorflow_MNIST/test
 
 arm-pose/lsp_dataset
 arm-pose/MNIST_data
+
+.ipynb_checkpoints/
