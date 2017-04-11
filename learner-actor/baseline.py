@@ -1,8 +1,19 @@
-import sys, time
+import sys, time, argparse, os
 import gym
-import dummy_env
+import dummy_env, util
+import json
+try:
+    import ppaquette_gym_doom
+except:
+    pass
 
-task = sys.argv[1]
+parser = argparse.ArgumentParser()
+parser.add_argument('--task')
+parser.add_argument('--log')
+
+args = parser.parse_args()
+
+task = args.task
 if task.startswith('dummy'):
     dummy_env.create(task)
 
@@ -26,6 +37,17 @@ for i_episode in range(200):
             break
 
 t1 = time.time()
-print (t1-t0)
+total_time = t1 - t0
+
+if args.log:
+    util.mkdirp(os.path.dirname(args.log))
+    with open(args.log, 'w') as f:
+        log_data = dict(
+            num_actors = 1,
+            total_time = total_time,
+            task = args.task,
+            mode = 'single-machine',
+        )
+        json.dump(log_data, f)
 #clientSocket.send('over')
 #clientSocket.close()
