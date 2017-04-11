@@ -1,1 +1,1 @@
-{"total_time": 1.411985158920288, "task": "Hopper-v1", "mode": "multi-machine", "date": "2017-04-11 03:20:45.155990", "num_actors": 2, "client_addrs": [["10.1.1.13", 55422], ["10.1.1.11", 34858]]}
+{"total_time": 1.3023719787597656, "task": "Hopper-v1", "mode": "multi-machine", "date": "2017-04-11 03:21:47.672704", "num_actors": 2, "client_addrs": [["10.1.1.11", 34864], ["10.1.1.13", 55430]]}
