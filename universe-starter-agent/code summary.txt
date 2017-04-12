@@ -1,0 +1,23 @@
+## a3c.py:
+Handle the multi-process situation. Learner uses VNC to communicate with actor
+# Changes: use multiple machines instead of multiple processes. We will use our own network code instead of VNC.
+Send dW and dB with UDP multicast instead of parameter server.
+
+## env.py:
+environment setup code
+# Changes: none
+
+
+## model.py:
+Tensorflow model + training code
+# Changes: none
+
+
+## train.py:
+Parse cmd args, and a script that uses tmux to run multiple processes on a single machine
+# Changes: write our own script to run one instance on a single machine
+
+
+## worker.py:
+Parse cmd args, and a script that runs a worker instance
+# Changes: change the script to fit our need
