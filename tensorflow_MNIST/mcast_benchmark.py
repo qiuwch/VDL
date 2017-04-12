@@ -56,12 +56,12 @@ if __name__ == '__main__':
   num_rounds = int(sys.argv[3])
   payload_kb_size = int(sys.argv[4])
   
+  t0 = time.time()
   # Train
   inc_msg_q = Queue.Queue()
   ret_val = Queue.Queue()
   sock_listen_thread = create_sock_listen_thread(sock, self_IP, inc_msg_q, num_peers, ret_val)
   
-  t0 = time.time()
   for _ in range(num_rounds):
     payload = bytearray(payload_kb_size * 1000)
     time.sleep(batch_runtime)
@@ -75,8 +75,9 @@ if __name__ == '__main__':
   while not inc_msg_q.empty():
     # Process received delta_W, delta_b from other peers
     payload_from_others = inc_msg_q.get(False) 
-  t1 = time.time()
   
   socket_util.close_UDP_mcast_peer(sock)
-  print "Time passed: ", t1-t0
+  
+  t1 = time.time()
+  print "Total runtime: ", t1-t0
   
