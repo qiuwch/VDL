@@ -1,0 +1,9 @@
+$ python 1p_benchmark.py 0.07 600 300
+Time passed:  42.1043019295
+$ python mcast_benchmark.py 6 0.07 100 300
+Time passed:  8.76891589165
+
+$ python 1p_benchmark.py 1 60 300
+Time passed:  60.0715081692
+$ python mcast_benchmark.py 6 1 10 300
+Time passed:  11.2086901665
