@@ -1,13 +1,29 @@
 # Report the fps of each openai gym environments
 # TODO: Check whether my way of checking fps is valid?
 import gym
-import time, argparse
-env_names = ['CartPole-v0', 'Breakout-v0', 'Hopper-v1', 'Humanoid-v1']
-try:
-    import ppaquette_gym_doom
-    env_names.append('ppaquette/DoomDeathmatch-v0')
-except:
-    pass
+import time, argparse, sys
+
+group_gym = []
+group_dummy = []
+
+def load_gym():
+    global group_gym
+    group_gym += ['CartPole-v0', 'Breakout-v0', 'Hopper-v1', 'Humanoid-v1']
+    try:
+        import ppaquette_gym_doom
+        group_gym.append('ppaquette/DoomDeathmatch-v0')
+    except:
+        pass
+
+def load_dummy():
+    # Dummy environments are used to simulate envs with different computation speeds and observation size
+    global group_dummy
+    sys.path.append('../learner-actor')
+    import dummy_env
+    fps =  [500, 600, 6000, 60000]
+    group_dummy = ['dummy/OBS1000-FPS%d-v0' % v for v in fps]
+    for env in group_dummy:
+        dummy_env.create(env)
 
 class FPSCounter():
     '''
@@ -63,10 +79,13 @@ def run_env(env_name):
     env.reset()
     sec_threshold = 5
     start_time = time.time()
-    while(1):
+
+    while(True):
         # env.render()
         action = env.action_space.sample() # Get a random action
         # action = get_an_intelligent_action()
+        # action = 0
+
         [obs, reward, done, info] = env.step(action) # actor/environment process 2, openai gym
         if done:
             env.reset()
@@ -77,7 +96,7 @@ def run_env(env_name):
         if time.time() - start_time > sec_threshold:
             break
 
-if __name__ == '__main__':
+def main():
     # env_name = 'CartPole-v0'
     # env_name = 'Breakout-v0'
     # env_name = 'Hopper-v1'
@@ -87,10 +106,29 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--env')
+    parser.add_argument('--gym', action='store_true')
+    parser.add_argument('--dummy', action='store_true')
     args = parser.parse_args()
 
-    if not args.env:
-        for env_name in env_names:
-            run_env(env_name)
-    else:
+    if args.env:
         run_env(args.env)
+        return
+
+    envs = []
+    if not any([args.gym, args.dummy]):
+        args.gym = True
+        args.dummy = True
+
+    if args.gym:
+        load_gym()
+        envs += group_gym
+
+    if args.dummy:
+        load_dummy()
+        envs += group_dummy
+
+    for env_name in envs:
+        run_env(env_name)
+
+if __name__ == '__main__':
+    main()
