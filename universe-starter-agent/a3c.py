@@ -283,6 +283,7 @@ server.
             # `self.train_op = tf.group(opt.apply_gradients(grads_and_vars), inc_step)``
             # Search this file to find these two lines.
             # I did not use line number because it might change
+            # @Vincent, the loop is executed in worker.py:L81
 
             fetches = [self.summary_op, self.train_op, self.global_step]
         else:
