@@ -119,6 +119,7 @@ runner appends the policy to the queue.
         rollout = PartialRollout()
 
         for _ in range(num_local_steps):
+            # TODO: @qiuwch, Replace policy.act to action from learner
             fetched = policy.act(last_state, *last_features)
             action, value_, features = fetched[0], fetched[1], fetched[2:]
             # argmax to convert from one-hot
@@ -127,6 +128,7 @@ runner appends the policy to the queue.
                 env.render()
 
             # collect the experience
+            # TODO: @qiuwch, Replace rollout.add to a function sending message back to the learner
             rollout.add(last_state, action, reward, value_, terminal, last_features)
             length += 1
             rewards += reward
@@ -266,6 +268,7 @@ and updates the parameters.  The update is then sent to the parameter
 server.
 """
 
+        # TODO: @Vincent Replace sync operator with multicase communication
         sess.run(self.sync)  # copy weights from shared to local
         rollout = self.pull_batch_from_queue()
         batch = process_rollout(rollout, gamma=0.99, lambda_=1.0)
@@ -273,6 +276,14 @@ server.
         should_compute_summary = self.task == 0 and self.local_steps % 11 == 0
 
         if should_compute_summary:
+            # TODO: @Vincent Add gradient information into fetch list, so that we can get gradients from the computation.
+            # See
+            # `grads_and_vars = list(zip(grads, self.network.var_list))`
+            # and
+            # `self.train_op = tf.group(opt.apply_gradients(grads_and_vars), inc_step)``
+            # Search this file to find these two lines.
+            # I did not use line number because it might change
+
             fetches = [self.summary_op, self.train_op, self.global_step]
         else:
             fetches = [self.train_op, self.global_step]
