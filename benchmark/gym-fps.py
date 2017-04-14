@@ -1,7 +1,7 @@
 # Report the fps of each openai gym environments
 # TODO: Check whether my way of checking fps is valid?
 import gym
-import time, argparse, sys
+import time, argparse, sys, json
 
 group_gym = []
 group_dummy = []
@@ -35,19 +35,27 @@ class FPSCounter():
 
     def reset(self):
         self.num_frames = 0
+        self.total_time = 0
+        self.total_frames = 0
         self.last_time = 0
 
     def tick(self):
         self.num_frames += 1
         current_time = time.time()
 
-        if self.last_time == 0:
+        if self.last_time == 0: # Initially
             self.last_time = current_time
 
         if current_time - self.last_time > 1:
             print 'FPS %d' % self.num_frames
+            self.total_time += (current_time - self.last_time)
+            self.total_frames += self.num_frames
+
             self.num_frames = 0
             self.last_time = current_time
+
+    def average_fps(self):
+        return float(self.total_frames) / self.total_time
 
 def test_FPSCounter():
     '''
@@ -96,13 +104,14 @@ def run_env(env_name):
         if time.time() - start_time > sec_threshold:
             break
 
+    log_data = dict(
+        env_name = env_name,
+        FPS = fps_counter.average_fps(),
+    )
+    return log_data
+
 def main():
-    # env_name = 'CartPole-v0'
-    # env_name = 'Breakout-v0'
-    # env_name = 'Hopper-v1'
-    # env_name = 'Humanoid-v1'
     # env_name = 'CarRacing-v0'
-    # run_env(env_name)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--env')
@@ -128,7 +137,10 @@ def main():
         envs += group_dummy
 
     for env_name in envs:
-        run_env(env_name)
+        log_data = run_env(env_name)
+        with open('log/%s-fps.json' % env_name, 'w') as f:
+            json.dump(log_data, f)
+
 
 if __name__ == '__main__':
     main()
