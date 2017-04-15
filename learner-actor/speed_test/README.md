@@ -42,3 +42,19 @@ Counter: Network Throughput, Sum: 800000000.00
 Timer: Communication, total time: 12.255185, count: 1000
 Speed: 65278.49KB/s
 ```
+---
+One server <-> three clients
+
+```
+Timer: Communication, total time: 19.186336, count: 1000
+Speed: 41696.34KB/s
+Done
+Done
+Counter: Network Throughput, Sum: 800000000.00
+Timer: Communication, total time: 19.811284, count: 1000
+Speed: 40381.03KB/s
+Done
+Counter: Network Throughput, Sum: 800000000.00
+Timer: Communication, total time: 18.688811, count: 1000
+Speed: 42806.36KB/s
+```
