@@ -63,8 +63,8 @@ def train():
     data = varm.VarmDataset()
 
     [image_batch, label_batch] = net.input_graph()
-    fc = net.inference_graph(image_batch) # Use a fc layer to do regression
-    loss = net.loss_graph(fc, label_batch)
+    prediction = net.inference_graph(image_batch) # Use a fc layer to do regression
+    loss = net.loss_graph(prediction, label_batch)
     [train_op, grad_step] = net.train_step(loss)
 
     # grad_step = tf.train.AdamOptimizer(learning_rate = 1e-4).compute_gradients(loss)
@@ -90,9 +90,9 @@ def train():
 
                 test_img[0,:,:,:] = raw_im
                 test_label = data._read_label(test_id)
-                prediction = fc.eval(feed_dict = {image_batch: test_img})
+                predicted = prediction.eval(feed_dict = {image_batch: test_img})
                 print 'Iter: %d' % i
-                print 'Prediction: ', format_array(prediction[0])
+                print 'Prediction: ', format_array(predicted[0])
                 # ipdb.set_trace()
                 print 'GT:         ', format_array(test_label)
 
