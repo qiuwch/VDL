@@ -29,4 +29,4 @@ CUDA_VISIBLE_DEVICES= /usr/bin/python worker.py --log-dir /tmp/neonrace --env-id
 CUDA_VISIBLE_DEVICES= /usr/bin/python worker.py --log-dir /tmp/neonrace --env-id flashgames.NeonRace-v0 --num-workers <n> --job-name worker --task <k \in \mathbb{Z}_n> --remotes 1
 
 # modified to our taste:
-CUDA_VISIBLE_DEVICES= /usr/bin/python run.py --log-dir /tmp/neonrace --env-id flashgames.NeonRace-v0 --num-workers <n> --job-name worker --task <k \in \mathbb{Z}_n> --remotes 1
+CUDA_VISIBLE_DEVICES= /usr/bin/python run.py --log-dir /tmp/neonrace --env-id flashgames.NeonRace-v0 --num-workers <n> --task <k \in \mathbb{Z}_n> --remotes 1

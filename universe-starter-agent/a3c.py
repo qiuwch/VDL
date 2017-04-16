@@ -172,11 +172,6 @@ should be computed.
         self.env = env
         self.task = task
         worker_device = "/job:worker/task:{}/cpu:0".format(task)
-        with tf.device(tf.train.replica_device_setter(1, worker_device=worker_device)):
-            with tf.variable_scope("global"):
-                self.network = LSTMPolicy(env.observation_space.shape, env.action_space.n)
-                self.global_step = tf.get_variable("global_step", [], tf.int32, initializer=tf.constant_initializer(0, dtype=tf.int32),
-                                                   trainable=False)
 
         with tf.device(worker_device):
             with tf.variable_scope("local"):
@@ -233,10 +228,7 @@ should be computed.
 
             grads, _ = tf.clip_by_global_norm(grads, 40.0)
 
-            # copy weights from the parameter server to the local model
-            self.sync = tf.group(*[v1.assign(v2) for v1, v2 in zip(pi.var_list, self.network.var_list)])
-
-            grads_and_vars = list(zip(grads, self.network.var_list))
+            grads_and_vars = list(zip(grads, pi.var_list))
             inc_step = self.global_step.assign_add(tf.shape(pi.x)[0])
 
             # each worker has a different set of adam optimizer parameters
@@ -269,7 +261,7 @@ server.
 """
 
         # TODO: @Vincent Replace sync operator with multicase communication
-        sess.run(self.sync)  # copy weights from shared to local
+        #sess.run(self.sync)  # copy weights from shared to local
         rollout = self.pull_batch_from_queue()
         batch = process_rollout(rollout, gamma=0.99, lambda_=1.0)
 
