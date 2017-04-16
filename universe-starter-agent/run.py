@@ -131,13 +131,6 @@ Setting up Tensorflow for data parallel work
     spec = cluster_spec(args.num_workers, 1)
     cluster = tf.train.ClusterSpec(spec).as_cluster_def()
 
-    def shutdown(signal, frame):
-        logger.warn('Received signal %s: exiting', signal)
-        sys.exit(128+signal)
-    signal.signal(signal.SIGHUP, shutdown)
-    signal.signal(signal.SIGINT, shutdown)
-    signal.signal(signal.SIGTERM, shutdown)
-
     if args.job_name == "worker":
         server = tf.train.Server(cluster, job_name="worker", task_index=args.task,
                                  config=tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=2))

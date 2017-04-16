@@ -27,3 +27,6 @@ Parse cmd args, and a script that runs a worker instance
 ## Commands to run the code without invoking tmux:
 CUDA_VISIBLE_DEVICES= /usr/bin/python worker.py --log-dir /tmp/neonrace --env-id flashgames.NeonRace-v0 --num-workers <n> --job-name ps
 CUDA_VISIBLE_DEVICES= /usr/bin/python worker.py --log-dir /tmp/neonrace --env-id flashgames.NeonRace-v0 --num-workers <n> --job-name worker --task <k \in \mathbb{Z}_n> --remotes 1
+
+# modified to our taste:
+CUDA_VISIBLE_DEVICES= /usr/bin/python run.py --log-dir /tmp/neonrace --env-id flashgames.NeonRace-v0 --num-workers <n> --job-name worker --task <k \in \mathbb{Z}_n> --remotes 1
