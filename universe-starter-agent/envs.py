@@ -41,7 +41,8 @@ def create_flash_env(env_id, client_id, remotes, **_):
     keys = ['left', 'right', 'up', 'down', 'x']
     if env_id == 'flashgames.NeonRace-v0':
         # Better key space for this game.
-        keys = ['left', 'right', 'up', 'left up', 'right up', 'down', 'up x']
+        # keys = ['left', 'right', 'up', 'left up', 'right up', 'down', 'up x']
+	keys = ['left up', 'right up']
     logger.info('create_flash_env(%s): keys=%s', env_id, keys)
 
     env = DiscreteToFixedKeysVNCActions(env, keys)
