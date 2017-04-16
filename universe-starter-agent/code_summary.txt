@@ -21,3 +21,9 @@ Parse cmd args, and a script that uses tmux to run multiple processes on a singl
 ## worker.py:
 Parse cmd args, and a script that runs a worker instance
 # Changes: change the script to fit our need
+
+
+
+## Commands to run the code without invoking tmux:
+CUDA_VISIBLE_DEVICES= /usr/bin/python worker.py --log-dir /tmp/neonrace --env-id flashgames.NeonRace-v0 --num-workers <n> --job-name ps
+CUDA_VISIBLE_DEVICES= /usr/bin/python worker.py --log-dir /tmp/neonrace --env-id flashgames.NeonRace-v0 --num-workers <n> --job-name worker --task <k \in \mathbb{Z}_n> --remotes 1
