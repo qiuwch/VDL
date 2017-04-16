@@ -59,8 +59,7 @@ def run(args):
     logger.info(
         "Starting session. If this hangs, we're mostly likely waiting to connect to the parameter server. " +
         "One common cause is that the parameter server DNS name isn't resolving yet, or is misspecified.")
-    with tf.InteractiveSession() as sess:
-        sess.run(trainer.sync)
+    with tf.Session() as sess:
         trainer.start(sess, summary_writer)
         while True:
             trainer.process(sess)
