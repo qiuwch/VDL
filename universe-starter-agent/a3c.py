@@ -140,7 +140,6 @@ runner appends the policy to the queue.
                 summary = tf.Summary()
                 for k, v in info.items():
                     summary.value.add(tag=k, simple_value=float(v))
-                summary_writer.add_summary(summary, policy.global_step.eval())
                 summary_writer.flush()
 
             timestep_limit = env.spec.tags.get('wrapper_config.TimeLimit.max_episode_steps')
@@ -176,7 +175,6 @@ should be computed.
         with tf.device(worker_device):
             with tf.variable_scope("local"):
                 self.local_network = pi = LSTMPolicy(env.observation_space.shape, env.action_space.n)
-                pi.global_step = self.global_step
 
             self.ac = tf.placeholder(tf.float32, [None, env.action_space.n], name="ac")
             self.adv = tf.placeholder(tf.float32, [None], name="adv")
@@ -229,11 +227,10 @@ should be computed.
             grads, _ = tf.clip_by_global_norm(grads, 40.0)
 
             grads_and_vars = list(zip(grads, pi.var_list))
-            inc_step = self.global_step.assign_add(tf.shape(pi.x)[0])
 
             # each worker has a different set of adam optimizer parameters
             opt = tf.train.AdamOptimizer(1e-4)
-            self.train_op = tf.group(opt.apply_gradients(grads_and_vars), inc_step)
+            self.train_op = opt.apply_gradients(grads_and_vars)
             self.summary_writer = None
             self.local_steps = 0
 
@@ -277,9 +274,9 @@ server.
             # I did not use line number because it might change
             # @Vincent, the loop is executed in worker.py:L81
 
-            fetches = [self.summary_op, self.train_op, self.global_step]
+            fetches = [self.summary_op, self.train_op]
         else:
-            fetches = [self.train_op, self.global_step]
+            fetches = [self.train_op]
 
         feed_dict = {
             self.local_network.x: batch.si,
