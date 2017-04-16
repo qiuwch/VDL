@@ -6,6 +6,7 @@
 *.a
 *~
 *.zip
+*.ini
 
 .ignore/
 .cache/
@@ -19,3 +20,4 @@ arm-pose/lsp_dataset
 arm-pose/MNIST_data
 
 .ipynb_checkpoints/
+

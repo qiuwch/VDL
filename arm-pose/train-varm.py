@@ -15,65 +15,32 @@ FLAGS = tf.app.flags.FLAGS  # Define global variables
 tf.app.flags.DEFINE_string('checkpoint_dir', 'tmp', 'Checkpoint directory')
 # tf.app.flags.DEFINE_integer('batch_size', 30, 'Batch size')
 
-def training_batch():
-    # return varm.random_training_batch()
-    return varm.lsp_training_batch()
-
-def test(): # Apply the model to predict on an image
-    print 'Start testing'
-    with tf.Session() as sess:
-        ckpt = tf.train.get_checkpoint_state(FLAGS.checkpoint_dir)
-        if ckpt and ckpt.model_checkpoint_path:
-            saver.restore(sess, ckpt.model_checkpoint_path)
-        else:
-            print('No checkpoint file found')
-
-        # images and labels are tensorflow variables, not the actual value
-        image_batch = testing_batch()
-        # labels are 6 numbers, camera pos (3), arm configuration (3)
-        # images are with random lighting and random texture color
-
-        # Build the inference graph
-        fc = inference_graph(image_batch) # Use a fc layer to do regression
-
-        with tf.Session() as sess:
-            sess.run(fc)
-
-        # Run the testing on an image and output the estimation for this image
-        # Should be used for debug, demo
-        # prediction = run(inference_op, image)
-        # prediction = sess.run([inference_op])
-
-        # Apply inference op to the input image
-        # if gt:
-        #     # Compare the prediction with gt
-        #     print compare(prediction, gt)
-
-def eval():
-    # Evaluation on testing data
-    # Create an evaluation op and use session to run this op
-    pass
-
 def train():
     # labels are 6 numbers, camera pos (3), arm configuration (3)
     # images are with random lighting and random texture color
-    net = alexnet.AlexNet()
-    # net = alexnet.LinearToy()
+    # net = alexnet.AlexNet()
+    net = alexnet.LinearToy()
     # data = varm.RandomDataset()
     data = varm.VarmDataset()
 
     [image_batch, label_batch] = net.input_graph()
-    fc = net.inference_graph(image_batch) # Use a fc layer to do regression
-    loss = net.loss_graph(fc, label_batch)
+    prediction = net.inference_graph(image_batch) # Use a fc layer to do regression
+    loss = net.loss_graph(prediction, label_batch)
     [train_op, grad_step] = net.train_step(loss)
-
     # grad_step = tf.train.AdamOptimizer(learning_rate = 1e-4).compute_gradients(loss)
 
-    def format_array(arr):
+    print_grad = True
+    random_check = True
+    save_step = 100
+
+    def _format_array(arr):
         return ', '.join(['%7.3f' % v for v in arr])
+
+    saver = tf.train.Saver()
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
+
         for i in range(2000):
             # pdb.set_trace()
             batch = data.next_train_batch(10)
@@ -81,7 +48,7 @@ def train():
             # if i % 100 == 0:
             tf.Print(loss, [loss], 'Iter %d, Loss=' % i).eval(feed_dict = {image_batch: batch[0], label_batch: batch[1]})
 
-            if True:
+            if random_check:
                 test_id = random.randrange(1000)
                 test_img = np.zeros((1, 256, 256, 3))
                 raw_im = data._read_image(test_id)
@@ -90,14 +57,14 @@ def train():
 
                 test_img[0,:,:,:] = raw_im
                 test_label = data._read_label(test_id)
-                prediction = fc.eval(feed_dict = {image_batch: test_img})
+                predicted = prediction.eval(feed_dict = {image_batch: test_img})
                 print 'Iter: %d' % i
-                print 'Prediction: ', format_array(prediction[0])
+                print 'Prediction: ', _format_array(predicted[0])
                 # ipdb.set_trace()
-                print 'GT:         ', format_array(test_label)
+                print 'GT:         ', _format_array(test_label)
 
 
-            if True:
+            if print_grad:
                 grad_vals = sess.run([tf.reduce_sum(tf.abs(grad)) for grad, _ in grad_step], feed_dict={image_batch: batch[0], label_batch: batch[1]})
 
                 var_to_grad = {}
@@ -105,6 +72,10 @@ def train():
                     var_to_grad[var.name] = grad_val
                     # print var.name
                     print var.name, grad_val
+
+            if save_step != 0 and (i % save_step) == 0:
+                save_path = saver.save(sess, "log/model_%d.ckpt" % i)
+
 
 
 def main():
