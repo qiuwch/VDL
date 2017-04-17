@@ -7,6 +7,8 @@ import six.moves.queue as queue
 import scipy.signal
 import threading
 import distutils.version
+import mcast
+import ipdb
 use_tf12_api = distutils.version.LooseVersion(tf.VERSION) >= distutils.version.LooseVersion('0.12.0')
 
 def discount(x, gamma):
@@ -227,8 +229,11 @@ should be computed.
         grads_and_vars = list(zip(grads, pi.var_list))
 
         # each worker has a different set of adam optimizer parameters
-        opt = tf.train.AdamOptimizer(1e-4)
-        self.train_op = opt.apply_gradients(grads_and_vars)
+        self.opt = tf.train.AdamOptimizer(1e-4)
+        self.train_op = self.opt.apply_gradients(grads_and_vars)
+
+        # Expose the gradients
+        self.grads_and_vars = grads_and_vars
         self.summary_writer = None
         self.local_steps = 0
 
@@ -272,9 +277,9 @@ server.
             # I did not use line number because it might change
             # @Vincent, the loop is executed in worker.py:L81
 
-            fetches = [self.summary_op, self.train_op]
+            fetches = [self.summary_op, self.train_op, self.grads_and_vars]
         else:
-            fetches = [self.train_op]
+            fetches = [self.train_op, self.grads_and_vars]
 
         feed_dict = {
             self.local_network.x: batch.si,
@@ -287,7 +292,19 @@ server.
 
         fetched = sess.run(fetches, feed_dict=feed_dict)
 
+        grads_and_vars = fetched[-1] # This is the grads and vars
+        mcast.broadcast_grads(grads_and_vars)
+
+        # remote_grads_and_vars = grads_and_vars # TODO: @qiuwch, need to fix this
+        # self.opt.apply_gradients(remote_grads_and_vars)
+
+        while not mcast.grad_queue.empty():
+            remote_grads_and_vars = mcast.grad_queue.get()
+            # self.opt.apply_gradients(remote_grads_and_vars) # TODO: @qiuwch, need to fix this
+            print('Apply remote gradients')
+            # apply_grad(grads) # Need to implement this @qiuwch
+
         if should_compute_summary:
-            self.summary_writer.add_summary(tf.Summary.FromString(fetched[0]), fetched[-1])
+            self.summary_writer.add_summary(tf.Summary.FromString(fetched[0]))
             self.summary_writer.flush()
         self.local_steps += 1
