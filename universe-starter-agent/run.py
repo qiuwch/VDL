@@ -7,6 +7,7 @@ import logging
 import sys, signal
 import time
 import os
+import ipdb
 from a3c import A3C
 from envs import create_env
 import distutils.version
@@ -35,6 +36,7 @@ def run(args):
         variables_to_save = [v for v in tf.all_variables() if not v.name.startswith("local")]
         init_op = tf.initialize_variables(variables_to_save)
         init_all_op = tf.initialize_all_variables()
+    print variables_to_save
     saver = FastSaver(variables_to_save)
 
     var_list = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, tf.get_variable_scope().name)
@@ -46,7 +48,6 @@ def run(args):
         logger.info("Initializing all parameters.")
         ses.run(init_all_op)
 
-    config = tf.ConfigProto(device_filters=["/job:ps", "/job:worker/task:{}/cpu:0".format(args.task)])
     logdir = os.path.join(args.log_dir, 'train')
 
     if use_tf12_api:
@@ -60,31 +61,12 @@ def run(args):
         "Starting session. If this hangs, we're mostly likely waiting to connect to the parameter server. " +
         "One common cause is that the parameter server DNS name isn't resolving yet, or is misspecified.")
     with tf.Session() as sess:
+        init = tf.global_variables_initializer()
+        sess.run(init)
+
         trainer.start(sess, summary_writer)
         while True:
             trainer.process(sess)
-
-
-def cluster_spec(num_workers, num_ps):
-    """
-More tensorflow setup for data parallelism
-"""
-    cluster = {}
-    port = 12222
-
-    all_ps = []
-    host = '127.0.0.1'
-    for _ in range(num_ps):
-        all_ps.append('{}:{}'.format(host, port))
-        port += 1
-    cluster['ps'] = all_ps
-
-    all_workers = []
-    for _ in range(num_workers):
-        all_workers.append('{}:{}'.format(host, port))
-        port += 1
-    cluster['worker'] = all_workers
-    return cluster
 
 def main(_):
     """
@@ -94,7 +76,6 @@ Setting up Tensorflow for data parallel work
     parser = argparse.ArgumentParser(description=None)
     parser.add_argument('-v', '--verbose', action='count', dest='verbosity', default=0, help='Set verbosity.')
     parser.add_argument('--task', default=0, type=int, help='Task index')
-    parser.add_argument('--num-workers', default=1, type=int, help='Number of workers')
     parser.add_argument('--log-dir', default="/tmp/pong", help='Log directory path')
     parser.add_argument('--env-id', default="PongDeterministic-v3", help='Environment id')
     parser.add_argument('-r', '--remotes', default=None,

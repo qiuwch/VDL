@@ -170,69 +170,67 @@ should be computed.
 
         self.env = env
         self.task = task
-        worker_device = "/job:worker/task:{}/cpu:0".format(task)
 
-        with tf.device(worker_device):
-            with tf.variable_scope("local"):
-                self.local_network = pi = LSTMPolicy(env.observation_space.shape, env.action_space.n)
+        with tf.variable_scope("local"):
+            self.local_network = pi = LSTMPolicy(env.observation_space.shape, env.action_space.n)
 
-            self.ac = tf.placeholder(tf.float32, [None, env.action_space.n], name="ac")
-            self.adv = tf.placeholder(tf.float32, [None], name="adv")
-            self.r = tf.placeholder(tf.float32, [None], name="r")
+        self.ac = tf.placeholder(tf.float32, [None, env.action_space.n], name="ac")
+        self.adv = tf.placeholder(tf.float32, [None], name="adv")
+        self.r = tf.placeholder(tf.float32, [None], name="r")
 
-            log_prob_tf = tf.nn.log_softmax(pi.logits)
-            prob_tf = tf.nn.softmax(pi.logits)
+        log_prob_tf = tf.nn.log_softmax(pi.logits)
+        prob_tf = tf.nn.softmax(pi.logits)
 
-            # the "policy gradients" loss:  its derivative is precisely the policy gradient
-            # notice that self.ac is a placeholder that is provided externally.
-            # adv will contain the advantages, as calculated in process_rollout
-            pi_loss = - tf.reduce_sum(tf.reduce_sum(log_prob_tf * self.ac, [1]) * self.adv)
+        # the "policy gradients" loss:  its derivative is precisely the policy gradient
+        # notice that self.ac is a placeholder that is provided externally.
+        # adv will contain the advantages, as calculated in process_rollout
+        pi_loss = - tf.reduce_sum(tf.reduce_sum(log_prob_tf * self.ac, [1]) * self.adv)
 
-            # loss of value function
-            vf_loss = 0.5 * tf.reduce_sum(tf.square(pi.vf - self.r))
-            entropy = - tf.reduce_sum(prob_tf * log_prob_tf)
+        # loss of value function
+        vf_loss = 0.5 * tf.reduce_sum(tf.square(pi.vf - self.r))
+        entropy = - tf.reduce_sum(prob_tf * log_prob_tf)
 
-            bs = tf.to_float(tf.shape(pi.x)[0])
-            self.loss = pi_loss + 0.5 * vf_loss - entropy * 0.01
+        bs = tf.to_float(tf.shape(pi.x)[0])
+        self.loss = pi_loss + 0.5 * vf_loss - entropy * 0.01
 
-            # 20 represents the number of "local steps":  the number of timesteps
-            # we run the policy before we update the parameters.
-            # The larger local steps is, the lower is the variance in our policy gradients estimate
-            # on the one hand;  but on the other hand, we get less frequent parameter updates, which
-            # slows down learning.  In this code, we found that making local steps be much
-            # smaller than 20 makes the algorithm more difficult to tune and to get to work.
-            self.runner = RunnerThread(env, pi, 20, visualise)
+        # 20 represents the number of "local steps":  the number of timesteps
+        # we run the policy before we update the parameters.
+        # The larger local steps is, the lower is the variance in our policy gradients estimate
+        # on the one hand;  but on the other hand, we get less frequent parameter updates, which
+        # slows down learning.  In this code, we found that making local steps be much
+        # smaller than 20 makes the algorithm more difficult to tune and to get to work.
+        self.runner = RunnerThread(env, pi, 20, visualise)
 
 
-            grads = tf.gradients(self.loss, pi.var_list)
+        grads = tf.gradients(self.loss, pi.var_list)
 
-            if use_tf12_api:
-                tf.summary.scalar("model/policy_loss", pi_loss / bs)
-                tf.summary.scalar("model/value_loss", vf_loss / bs)
-                tf.summary.scalar("model/entropy", entropy / bs)
-                tf.summary.image("model/state", pi.x)
-                tf.summary.scalar("model/grad_global_norm", tf.global_norm(grads))
-                tf.summary.scalar("model/var_global_norm", tf.global_norm(pi.var_list))
-                self.summary_op = tf.summary.merge_all()
+        if use_tf12_api:
+            tf.summary.scalar("model/policy_loss", pi_loss / bs)
+            tf.summary.scalar("model/value_loss", vf_loss / bs)
+            tf.summary.scalar("model/entropy", entropy / bs)
+            tf.summary.image("model/state", pi.x)
+            tf.summary.scalar("model/grad_global_norm", tf.global_norm(grads))
+            tf.summary.scalar("model/var_global_norm", tf.global_norm(pi.var_list))
+            self.summary_op = tf.summary.merge_all()
 
-            else:
-                tf.scalar_summary("model/policy_loss", pi_loss / bs)
-                tf.scalar_summary("model/value_loss", vf_loss / bs)
-                tf.scalar_summary("model/entropy", entropy / bs)
-                tf.image_summary("model/state", pi.x)
-                tf.scalar_summary("model/grad_global_norm", tf.global_norm(grads))
-                tf.scalar_summary("model/var_global_norm", tf.global_norm(pi.var_list))
-                self.summary_op = tf.merge_all_summaries()
+        else:
+            tf.scalar_summary("model/policy_loss", pi_loss / bs)
+            tf.scalar_summary("model/value_loss", vf_loss / bs)
+            tf.scalar_summary("model/entropy", entropy / bs)
+            tf.image_summary("model/state", pi.x)
+            tf.scalar_summary("model/grad_global_norm", tf.global_norm(grads))
+            tf.scalar_summary("model/var_global_norm", tf.global_norm(pi.var_list))
+            self.summary_op = tf.merge_all_summaries()
 
-            grads, _ = tf.clip_by_global_norm(grads, 40.0)
+        grads, _ = tf.clip_by_global_norm(grads, 40.0)
 
-            grads_and_vars = list(zip(grads, pi.var_list))
+        grads_and_vars = list(zip(grads, pi.var_list))
 
-            # each worker has a different set of adam optimizer parameters
-            opt = tf.train.AdamOptimizer(1e-4)
-            self.train_op = opt.apply_gradients(grads_and_vars)
-            self.summary_writer = None
-            self.local_steps = 0
+        # each worker has a different set of adam optimizer parameters
+        opt = tf.train.AdamOptimizer(1e-4)
+        self.train_op = opt.apply_gradients(grads_and_vars)
+        self.summary_writer = None
+        self.local_steps = 0
 
     def start(self, sess, summary_writer):
         self.runner.start_runner(sess, summary_writer)
