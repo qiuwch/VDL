@@ -12,6 +12,8 @@ import socket_util
 import Queue
 import cPickle as pickle
 use_tf12_api = distutils.version.LooseVersion(tf.VERSION) >= distutils.version.LooseVersion('0.12.0')
+sock_listen_thread = None
+
 
 def discount(x, gamma):
     return scipy.signal.lfilter([1], [1, -gamma], x[::-1], axis=0)[::-1]
@@ -170,8 +172,8 @@ An implementation of the A3C algorithm that is reasonably well-tuned for the VNC
 Below, we will have a modest amount of complexity due to the way TensorFlow handles data parallelism.
 But overall, we'll define the model, specify its inputs, and describe how the policy gradients step
 should be computed.
-"""
-
+"""    
+        global sock_listen_thread
         self.env = env
         self.task = task
 
@@ -245,14 +247,14 @@ should be computed.
         self.msg_sent = 0
         
         self.sock, self_IP, self.mcast_destination = socket_util.set_up_UDP_mcast_peer()
-        self.sock_listen_thread = socket_util.SockListenThread(self.sock, self_IP, self.inc_msg_q, num_workers, self.ret_val)
+        sock_listen_thread = socket_util.SockListenThread(self.sock, self_IP, self.inc_msg_q, num_workers, self.ret_val)
         #TODO while waiting, other stuff are still happening
         socket_util.await_start_mcast(self.sock)
 
     def start(self, sess, summary_writer):
         self.runner.start_runner(sess, summary_writer)
         self.summary_writer = summary_writer
-        self.sock_listen_thread.start()
+        sock_listen_thread.start()
 
     def pull_batch_from_queue(self):
         """
@@ -324,3 +326,11 @@ server.
             self.summary_writer.add_summary(tf.Summary.FromString(fetched[0]))
             self.summary_writer.flush()
         self.local_steps += 1
+
+        
+def stop_sock_listen_thread():
+    sock_listen_thread.stop()
+
+    
+import atexit
+atexit.register(stop_sock_listen_thread)
