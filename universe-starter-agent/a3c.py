@@ -9,6 +9,30 @@ import threading
 import distutils.version
 use_tf12_api = distutils.version.LooseVersion(tf.VERSION) >= distutils.version.LooseVersion('0.12.0')
 
+class LearnerServer:
+    def __init__(self):
+        self.policy = None # The policy is shared between actors.
+        pass
+
+    def act(self, state): # Executed in server
+        fetched = self.policy.act(self.last_state, self.last_features)
+        action, value_, features = fetched[0], fetched[1], fetched[2:]
+        action_n = action.argmax()
+
+
+        return action_n
+
+    def send_state(self, state, reward, terminal, info):
+        self.rollout.add(self.last_state, self.action, reward, value_, self.last_features)
+        self.last_state = state
+        self.last_features = features
+        pass
+
+class ActorClient
+    pass
+
+learner = LearnerServer()
+
 def discount(x, gamma):
     return scipy.signal.lfilter([1], [1, -gamma], x[::-1], axis=0)[::-1]
 
@@ -66,6 +90,7 @@ once it has processed enough steps.
         self.features.extend(other.features)
 
 class RunnerThread(threading.Thread):
+    # A thread to run local actor
     """
 One of the key distinctions between a normal environment and a universe environment
 is that a universe environment is _real time_.  This means that there should be a thread
@@ -99,6 +124,7 @@ that would constantly interact with the environment and tell it what to do.  Thi
             # won't die with it, unless the timeout is set to some large number.  This is an empirical
             # observation.
 
+            # TODO: @qiuwch, Change this to be a remote queue
             self.queue.put(next(rollout_provider), timeout=600.0)
 
 
@@ -120,6 +146,8 @@ runner appends the policy to the queue.
 
         for _ in range(num_local_steps):
             # TODO: @qiuwch, Replace policy.act to action from learner
+            action = learner.act(last_state) # Get action from remote server
+
             fetched = policy.act(last_state, *last_features)
             action, value_, features = fetched[0], fetched[1], fetched[2:]
             # argmax to convert from one-hot
