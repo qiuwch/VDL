@@ -7,7 +7,40 @@ import sys
 import socket
 import struct
 import params
+import time
+import threading
 
+
+class SockListenThread(threading.Thread):
+    """
+    Thread class that listens for socket message receiving. It terminates when stop() is called.
+    """
+
+    def __init__(self, sock, self_IP, inc_msg_q, num_peers, ret_val):
+        super(SockListenThread, self).__init__()
+        self.sock = sock
+        self.self_IP = self_IP
+        self.inc_msg_q = inc_msg_q
+        self.num_peers = num_peers
+        self.ret_val = ret_val
+        self.rcv_msg_num = 0
+        self._stop = threading.Event()
+
+    def run(self):
+        while not self.stopped():
+            self.rcv_msg_num = socket_recv_chucked_data(self.sock, self.self_IP, self.inc_msg_q, self.num_peers, self.rcv_msg_num)
+        # thread terminating
+        time.sleep(1)
+        self.rcv_msg_num = socket_recv_chucked_data(self.sock, self.self_IP, self.inc_msg_q, self.num_peers, self.rcv_msg_num)
+        self.ret_val.put(self.rcv_msg_num)
+    
+    def stop(self):
+        self._stop.set()
+
+    def stopped(self):
+        return self._stop.isSet()
+
+        
 def set_up_start_mcast():
     '''
     Set up the network for start_mcast program
