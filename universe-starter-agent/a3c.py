@@ -8,7 +8,6 @@ import scipy.signal
 import threading
 import distutils.version
 import mcast
-import ipdb
 use_tf12_api = distutils.version.LooseVersion(tf.VERSION) >= distutils.version.LooseVersion('0.12.0')
 
 def discount(x, gamma):
