@@ -12,8 +12,8 @@ import argparse
 # default_action = 3
 # keys = ['left', 'right', 'up', 'left up', 'right up', 'down', 'up x']
 
-def main(snapshot):
-    env = create_env('flashgames.NeonRace-v0', client_id = 0, remotes = 1)
+def main(env, snapshot, visualise):
+    env = create_env(env, client_id = 0, remotes = 1)
     with tf.variable_scope("global"):
         policy = LSTMPolicy(env.observation_space.shape, env.action_space.n)
 
@@ -40,6 +40,8 @@ def main(snapshot):
 
             # state, reward, terminal, info = env.step(default_action)
             state, reward, terminal, info = env.step(action_n)
+            if visualise:
+                env.render()
             # env.render() # I need to visualize it during testing
             print 'length: %d, rewards: %f' % (length, rewards)
 
@@ -73,6 +75,9 @@ def main(snapshot):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--snapshot')
+    parser.add_argument('--env', default='flashgames.NeonRace-v0')
+    parser.add_argument('--visualise', action='store_true')
+
     args = parser.parse_args()
-    
-    main(args.snapshot)
+
+    main(args.env, args.snapshot, args.visualise)
