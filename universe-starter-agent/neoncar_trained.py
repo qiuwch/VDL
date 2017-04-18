@@ -4,14 +4,15 @@ from model import LSTMPolicy
 import envs
 from envs import create_env
 import tensorflow as tf
+import argparse
 
 
 # default_action = [('KeyEvent', 'ArrowUp', True)]
 # default_action = 0
-default_action = 3
+# default_action = 3
 # keys = ['left', 'right', 'up', 'left up', 'right up', 'down', 'up x']
 
-def run_env():
+def main(snapshot):
     env = create_env('flashgames.NeonRace-v0', client_id = 0, remotes = 1)
     with tf.variable_scope("global"):
         policy = LSTMPolicy(env.observation_space.shape, env.action_space.n)
@@ -28,7 +29,7 @@ def run_env():
         # saver.restore(sess, "train/model.ckpt-361814.data-00000-of-00001")
         # saver.restore(sess, "train/model.ckpt-361814")
         # saver.restore(sess, "/tmp/neonrace/train/model.ckpt-361714")
-        saver.restore(sess, "/home/qiuwch/neonrace/train/model.ckpt-361714")
+        saver.restore(sess, snapshot)
         while True:
             terminal_end = False
 
@@ -68,10 +69,10 @@ def run_env():
 #   observation_n, reward_n, done_n, info = env.step(action_n)
 #   env.render()
 
-def main():
-    # env = create_env()
-
-    run_env()
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--snapshot')
+    args = parser.parse_args()
+    
+    main(args.snapshot)
