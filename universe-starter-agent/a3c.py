@@ -7,7 +7,10 @@ import six.moves.queue as queue
 import scipy.signal
 import threading
 import distutils.version
-import mcast
+
+import socket_util
+import Queue
+import cPickle as pickle
 use_tf12_api = distutils.version.LooseVersion(tf.VERSION) >= distutils.version.LooseVersion('0.12.0')
 
 def discount(x, gamma):
@@ -161,7 +164,7 @@ runner appends the policy to the queue.
         yield rollout
 
 class A3C(object):
-    def __init__(self, env, task, visualise):
+    def __init__(self, env, task, visualise, num_workers):
         """
 An implementation of the A3C algorithm that is reasonably well-tuned for the VNC environments.
 Below, we will have a modest amount of complexity due to the way TensorFlow handles data parallelism.
@@ -235,10 +238,21 @@ should be computed.
         self.grads_and_vars = grads_and_vars
         self.summary_writer = None
         self.local_steps = 0
+        
+        # multicast setup
+        self.inc_msg_q = Queue.Queue()
+        self.ret_val = Queue.Queue()
+        self.msg_sent = 0
+        
+        self.sock, self_IP, self.mcast_destination = socket_util.set_up_UDP_mcast_peer()
+        self.sock_listen_thread = socket_util.SockListenThread(self.sock, self_IP, self.inc_msg_q, num_workers, self.ret_val)
+        #TODO while waiting, other stuff are still happening
+        socket_util.await_start_mcast(self.sock)
 
     def start(self, sess, summary_writer):
         self.runner.start_runner(sess, summary_writer)
         self.summary_writer = summary_writer
+        self.sock_listen_thread.start()
 
     def pull_batch_from_queue(self):
         """
@@ -259,7 +273,6 @@ and updates the parameters.  The update is then sent to the parameter
 server.
 """
 
-        # TODO: @Vincent Replace sync operator with multicase communication
         #sess.run(self.sync)  # copy weights from shared to local
         rollout = self.pull_batch_from_queue()
         batch = process_rollout(rollout, gamma=0.99, lambda_=1.0)
@@ -292,13 +305,17 @@ server.
         fetched = sess.run(fetches, feed_dict=feed_dict)
 
         grads_and_vars = fetched[-1] # This is the grads and vars
-        mcast.broadcast_grads(grads_and_vars)
+        grads_and_vars_data = pickle.dumps(grads_and_vars, -1)
+        self.msg_sent = socket_util.socket_send_data_chucks(self.sock, grads_and_vars_data, self.mcast_destination, self.msg_sent)
 
         # remote_grads_and_vars = grads_and_vars # TODO: @qiuwch, need to fix this
         # self.opt.apply_gradients(remote_grads_and_vars)
 
-        while not mcast.grad_queue.empty():
-            remote_grads_and_vars = mcast.grad_queue.get()
+        # Handle each message in the socket queue
+        while not self.inc_msg_q.empty():
+            # Process received grads_and_vars from other peers
+            remote_grads_and_vars_data = inc_msg_q.get(False)
+            remote_grads_and_vars = pickle.loads(remote_grads_and_vars_data)
             # self.opt.apply_gradients(remote_grads_and_vars) # TODO: @qiuwch, need to fix this
             print('Apply remote gradients')
             # apply_grad(grads) # Need to implement this @qiuwch
