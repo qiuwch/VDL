@@ -16,7 +16,7 @@ class SockListenThread(threading.Thread):
     Thread class that listens for socket message receiving. It terminates when stop() is called.
     """
 
-    def __init__(self, sock, self_IP, inc_msg_q, num_peers, ret_val):
+    def __init__(self, sock, self_IP, inc_msg_q, num_peers, ret_val, verbose_lvl = 1):
         super(SockListenThread, self).__init__()
         self.sock = sock
         self.self_IP = self_IP
@@ -24,15 +24,16 @@ class SockListenThread(threading.Thread):
         self.num_peers = num_peers
         self.ret_val = ret_val
         self.rcv_msg_num = 0
+        self.verbose_lvl = verbose_lvl
         self._stop = threading.Event()
         self.daemon = True # Make the daemon = True, so that I can kill this program with ctrl-c
 
     def run(self):
         while not self.stopped():
-            self.rcv_msg_num = socket_recv_chucked_data(self.sock, self.self_IP, self.inc_msg_q, self.num_peers, self.rcv_msg_num)
+            self.rcv_msg_num = socket_recv_chucked_data(self.sock, self.self_IP, self.inc_msg_q, self.num_peers, self.rcv_msg_num, self.verbose_lvl)
         # thread terminating
         time.sleep(1)
-        self.rcv_msg_num = socket_recv_chucked_data(self.sock, self.self_IP, self.inc_msg_q, self.num_peers, self.rcv_msg_num)
+        self.rcv_msg_num = socket_recv_chucked_data(self.sock, self.self_IP, self.inc_msg_q, self.num_peers, self.rcv_msg_num, self.verbose_lvl)
         self.ret_val.put(self.rcv_msg_num)
     
     def stop(self):
@@ -116,7 +117,7 @@ def socket_send_data_chucks(sock, data, mcast_destination, msg_sent):
 
     return msg_sent
 
-def socket_recv_chucked_data(sock, self_IP, queue, num_peers, rcv_msg_num):
+def socket_recv_chucked_data(sock, self_IP, queue, num_peers, rcv_msg_num, verbose_lvl = 1):
     '''
     Let the socket receive chucked data with a given total length. Retry receiving if packets
     are incomplete, but return null if timeout. Ignore packets sent by self
@@ -125,6 +126,7 @@ def socket_recv_chucked_data(sock, self_IP, queue, num_peers, rcv_msg_num):
     @param queue The queue to store the original data
     @param num_peers Number of mulitcast peers
     @param rcv_msg_num Total number of messages received from other peers before this call
+    @param verbose_lvl The level of verboseness (extent of debug messages)
     @return Total number of messages received from other peers after this call
     '''
     
@@ -160,6 +162,7 @@ def socket_recv_chucked_data(sock, self_IP, queue, num_peers, rcv_msg_num):
                         queue_cnt += 1
                         addr_dict[addr] = [0, '']               
     except socket.timeout:
-        print('socket_recv_chucked_data timed out')
+        if verbose_lvl >= 1:
+            print('socket_recv_chucked_data timed out')
     
     return rcv_msg_num
