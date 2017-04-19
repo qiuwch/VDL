@@ -33,25 +33,25 @@ class SockListenThread(threading.Thread):
         time.sleep(1)
         self.rcv_msg_num = socket_recv_chucked_data(self.sock, self.self_IP, self.inc_msg_q, self.num_peers, self.rcv_msg_num)
         self.ret_val.put(self.rcv_msg_num)
-    
+
     def stop(self):
         self._stop.set()
 
     def stopped(self):
         return self._stop.isSet()
 
-        
+
 def set_up_start_mcast():
     '''
     Set up the network for start_mcast program
     '''
-    
+
     # UDP setup
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind( ('', params.START_MCAST_PORT_NUM) )
-    
+
     mcast_destination = (params.MCAST_ADDR, params.PEER_PORT_NUM)
-    
+
     return (sock, mcast_destination)
 
 def set_up_UDP_mcast_peer():
@@ -70,7 +70,7 @@ def set_up_UDP_mcast_peer():
     mcast_group = socket.inet_aton(params.MCAST_ADDR)
     mreq = struct.pack('4sL', mcast_group, socket.INADDR_ANY)
     sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
-    
+
     return (sock, self_IP, mcast_destination)
 
 
@@ -87,12 +87,12 @@ def await_start_mcast(sock):
     Blocks and waits for start_mcast signal
     @params sock The socket to use
     '''
-    
+
     print('Waiting for start_mcast signal...')
     signal = sock.recvfrom(params.LEN_START_MCAST_SIGNAL)[0]
     assert (signal == params.START_MCAST_SIGNAL)
     print('Signal received.')
-    
+
 
 def socket_send_data_chucks(sock, data, mcast_destination, msg_sent):
     '''
@@ -101,13 +101,13 @@ def socket_send_data_chucks(sock, data, mcast_destination, msg_sent):
     @params data The data string
     @params mcast_destination Destination multicast address
     @param msg_sent Total number of messages sent before this call
-    @return Total number of messages sent after this call
+    @return Total number of chunks sent after this call
     '''
-    
+
     # Send tag "Arnold" followed by data length
     sock.sendto(params.IMAGE_SIZE_PACKET_TAG + str(len(data)), mcast_destination)
     msg_sent += 1
-    
+
     for i in xrange(0, sys.getsizeof(data), params.MAX_PACKET_SIZE):
         data_chuck = data[i : i + params.MAX_PACKET_SIZE]
         sock.sendto(data_chuck, mcast_destination)
@@ -126,10 +126,10 @@ def socket_recv_chucked_data(sock, self_IP, queue, num_peers, rcv_msg_num):
     @param rcv_msg_num Total number of messages received from other peers before this call
     @return Total number of messages received from other peers after this call
     '''
-    
+
     addr_dict = {}  # IP_addr   -> [data_remaining, recovering_data]
                     # 10.1.1.13 -> [4, "Hello W"]
-    
+
     sock.settimeout(params.SOCK_TIMEOUT_VAL)
     queue_cnt = 0
     try:
@@ -150,15 +150,18 @@ def socket_recv_chucked_data(sock, self_IP, queue, num_peers, rcv_msg_num):
                 # if "Arnold":
                 if msg[0 : params.LEN_IMAGE_SIZE_PACKET_TAG] == params.IMAGE_SIZE_PACKET_TAG:
                     data_len = int(msg[params.LEN_IMAGE_SIZE_PACKET_TAG :])
+                    if addr_dict[addr] != '':
+                        print('Incomplete message found, missing chunks %d' % addr_dict[addr])
                     addr_dict[addr] = [data_len, '']
                 else:
                     addr_dict[addr][0] -= len(msg)
                     addr_dict[addr][1] += msg
                     if addr_dict[addr][0] == 0:
                         queue.put(addr_dict[addr][1])
+                        print('Got data from peer')
                         queue_cnt += 1
-                        addr_dict[addr] = [0, '']               
+                        addr_dict[addr] = [0, '']
     except socket.timeout:
         print('socket_recv_chucked_data timed out')
-    
+
     return rcv_msg_num
