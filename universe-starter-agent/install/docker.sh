@@ -11,3 +11,9 @@ sudo add-apt-repository \
    stable"
 sudo apt-get update
 sudo apt-get install docker-ce
+
+# No sudo
+sudo groupadd docker
+sudo gpasswd -a ${USER} docker
+sudo service docker restart
+
