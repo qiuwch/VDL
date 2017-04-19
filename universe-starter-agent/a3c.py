@@ -148,6 +148,7 @@ runner appends the policy to the queue.
                 summary = tf.Summary()
                 for k, v in info.items():
                     summary.value.add(tag=k, simple_value=float(v))
+                summary_writer.add_summary(summary, policy.global_step.eval())
                 summary_writer.flush()
 
             timestep_limit = env.spec.tags.get('wrapper_config.TimeLimit.max_episode_steps')
@@ -181,6 +182,7 @@ should be computed.
 
         with tf.variable_scope("local"):
             self.local_network = pi = LSTMPolicy(env.observation_space.shape, env.action_space.n)
+            self.local_network.global_step = tf.get_variable("global_step", [], tf.int32, initializer=tf.constant_initializer(0, dtype=tf.int32), trainable=False)
 
         self.ac = tf.placeholder(tf.float32, [None, env.action_space.n], name="ac")
         self.adv = tf.placeholder(tf.float32, [None], name="adv")
@@ -233,10 +235,11 @@ should be computed.
         grads, _ = tf.clip_by_global_norm(grads, 40.0)
 
         grads_and_vars = list(zip(grads, pi.var_list))
+        inc_step = self.local_network.global_step.assign_add(tf.shape(pi.x)[0])
 
         # each worker has a different set of adam optimizer parameters
         self.opt = tf.train.AdamOptimizer(1e-4)
-        self.train_op = self.opt.apply_gradients(grads_and_vars)
+        self.train_op = tf.group(self.opt.apply_gradients(grads_and_vars), inc_step)
 
         # Expose the gradients
         self.grads_and_vars = grads_and_vars
