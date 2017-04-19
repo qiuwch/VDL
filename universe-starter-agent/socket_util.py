@@ -25,6 +25,7 @@ class SockListenThread(threading.Thread):
         self.ret_val = ret_val
         self.rcv_msg_num = 0
         self._stop = threading.Event()
+        self.daemon = True # Make the daemon = True, so that I can kill this program with ctrl-c
 
     def run(self):
         while not self.stopped():

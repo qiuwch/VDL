@@ -1,8 +1,12 @@
 # Prepare CCVL1-5 for with docker, tensorflow, etc.
+sh basic.sh
+sh git.sh
+
 # Install docker
+sh docker.sh
 
 # Install tensorflow
+sh python-lib.sh
 
 # Install gym, universe, etc.
-
-pip install --user tensorflow gym
+sh universe.sh
