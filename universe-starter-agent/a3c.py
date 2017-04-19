@@ -169,7 +169,7 @@ runner appends the policy to the queue.
         yield rollout
 
 class A3C(object):
-    def __init__(self, env, task, visualise, num_workers):
+    def __init__(self, env, task, visualise, num_workers, verbose_lvl):
         """
 An implementation of the A3C algorithm that is reasonably well-tuned for the VNC environments.
 Below, we will have a modest amount of complexity due to the way TensorFlow handles data parallelism.
@@ -254,7 +254,7 @@ should be computed.
 
         if self.num_workers > 1: # Only wait when we are using mutilple workers
             self.sock, self_IP, self.mcast_destination = socket_util.set_up_UDP_mcast_peer()
-            sock_listen_thread = socket_util.SockListenThread(self.sock, self_IP, self.inc_msg_q, num_workers, self.ret_val)
+            sock_listen_thread = socket_util.SockListenThread(self.sock, self_IP, self.inc_msg_q, num_workers, self.ret_val, verbose_lvl)
             #TODO while waiting, other stuff are still happening
             socket_util.await_start_mcast(self.sock)
 
