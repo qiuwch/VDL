@@ -14,8 +14,10 @@ import cPickle as pickle
 use_tf12_api = distutils.version.LooseVersion(tf.VERSION) >= distutils.version.LooseVersion('0.12.0')
 sock_listen_thread = None
 
-import pdb
-import time
+import pdb, time
+from perf_util import Timer, Counter
+total_timer = Timer("Total Time")
+throughput_counter = Counter("Network Throughput")
 
 
 def discount(x, gamma):
@@ -280,7 +282,7 @@ process grabs a rollout that's been produced by the thread runner,
 and updates the parameters.  The update is then sent to the parameter
 server.
 """
-
+	total_timer.tic()
         #sess.run(self.sync)  # copy weights from shared to local
         rollout = self.pull_batch_from_queue()
         batch = process_rollout(rollout, gamma=0.99, lambda_=1.0)
@@ -312,7 +314,15 @@ server.
         # pdb.set_trace()
         var_diff_data = pickle.dumps(var_diff, -1)
         msg_size = sum([len(v) for v in var_diff_data])
+        
+	
         # print('Diff to send: ', msg_size)
+        print(msg_size)
+        throughput_counter.add(msg_size)
+        print(throughput_counter)
+        print(total_timer)
+        print('Speed: %.2fKB/s' % (throughput_counter.sum / (total_timer.total+0.1) / 1000))
+
 
         if self.num_workers > 1:
             self.msg_sent = socket_util.socket_send_data_chucks(self.sock, var_diff_data, self.mcast_destination, self.msg_sent)
@@ -333,6 +343,7 @@ server.
             self.summary_writer.add_summary(tf.Summary.FromString(fetched[0]))
             self.summary_writer.flush()
         self.local_steps += 1
+        total_timer.toc()
 
 
 def stop_sock_listen_thread():
