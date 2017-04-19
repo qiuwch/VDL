@@ -15,6 +15,7 @@ use_tf12_api = distutils.version.LooseVersion(tf.VERSION) >= distutils.version.L
 sock_listen_thread = None
 
 import pdb
+import time
 
 
 def discount(x, gamma):
@@ -308,15 +309,20 @@ server.
         var1 = sess.run(self.local_network.var_list) # After training
 
         var_diff = [a - b for (a,b) in zip(var1, var0)]
+        # pdb.set_trace()
         var_diff_data = pickle.dumps(var_diff, -1)
+        msg_size = sum([len(v) for v in var_diff_data])
+        # print('Diff to send: ', msg_size)
 
         if self.num_workers > 1:
             self.msg_sent = socket_util.socket_send_data_chucks(self.sock, var_diff_data, self.mcast_destination, self.msg_sent)
+            print(self.msg_sent)
+            # time.sleep(1) # Give some time to receive all packets
 
             # Handle each message in the socket queue
             while not self.inc_msg_q.empty():
                 # Process received grads_and_vars from other peers
-                remote_var_diff_data = inc_msg_q.get(False)
+                remote_var_diff_data = self.inc_msg_q.get(False)
                 remote_var_diff = pickle.loads(remote_var_diff_data)
 
                 add_op = [a+b for (a,b) in zip(self.local_network.var_list, remote_var_diff)]
