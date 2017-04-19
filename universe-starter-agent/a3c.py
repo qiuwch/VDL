@@ -14,6 +14,8 @@ import cPickle as pickle
 use_tf12_api = distutils.version.LooseVersion(tf.VERSION) >= distutils.version.LooseVersion('0.12.0')
 sock_listen_thread = None
 
+import pdb
+
 
 def discount(x, gamma):
     return scipy.signal.lfilter([1], [1, -gamma], x[::-1], axis=0)[::-1]
@@ -172,7 +174,7 @@ An implementation of the A3C algorithm that is reasonably well-tuned for the VNC
 Below, we will have a modest amount of complexity due to the way TensorFlow handles data parallelism.
 But overall, we'll define the model, specify its inputs, and describe how the policy gradients step
 should be computed.
-"""    
+"""
         global sock_listen_thread
         self.env = env
         self.task = task
@@ -240,21 +242,24 @@ should be computed.
         self.grads_and_vars = grads_and_vars
         self.summary_writer = None
         self.local_steps = 0
-        
+
         # multicast setup
         self.inc_msg_q = Queue.Queue()
         self.ret_val = Queue.Queue()
         self.msg_sent = 0
-        
-        self.sock, self_IP, self.mcast_destination = socket_util.set_up_UDP_mcast_peer()
-        sock_listen_thread = socket_util.SockListenThread(self.sock, self_IP, self.inc_msg_q, num_workers, self.ret_val)
-        #TODO while waiting, other stuff are still happening
-        socket_util.await_start_mcast(self.sock)
+        self.num_workers = num_workers
+
+        if self.num_workers > 1: # Only wait when we are using mutilple workers
+            self.sock, self_IP, self.mcast_destination = socket_util.set_up_UDP_mcast_peer()
+            sock_listen_thread = socket_util.SockListenThread(self.sock, self_IP, self.inc_msg_q, num_workers, self.ret_val)
+            #TODO while waiting, other stuff are still happening
+            socket_util.await_start_mcast(self.sock)
 
     def start(self, sess, summary_writer):
         self.runner.start_runner(sess, summary_writer)
         self.summary_writer = summary_writer
-        sock_listen_thread.start()
+        if sock_listen_thread:
+            sock_listen_thread.start()
 
     def pull_batch_from_queue(self):
         """
@@ -282,18 +287,10 @@ server.
         should_compute_summary = self.task == 0 and self.local_steps % 11 == 0
 
         if should_compute_summary:
-            # TODO: @Vincent Add gradient information into fetch list, so that we can get gradients from the computation.
-            # See
-            # `grads_and_vars = list(zip(grads, self.network.var_list))`
-            # and
-            # `self.train_op = tf.group(opt.apply_gradients(grads_and_vars), inc_step)``
-            # Search this file to find these two lines.
-            # I did not use line number because it might change
-            # @Vincent, the loop is executed in worker.py:L81
-
-            fetches = [self.summary_op, self.train_op, self.grads_and_vars]
+            fetches = [self.summary_op, self.train_op]
         else:
-            fetches = [self.train_op, self.grads_and_vars]
+            fetches = [self.train_op]
+
 
         feed_dict = {
             self.local_network.x: batch.si,
@@ -304,33 +301,37 @@ server.
             self.local_network.state_in[1]: batch.features[1],
         }
 
+        # Get current trainable variables
+        # This is trainable variables
+        var0 = sess.run(self.local_network.var_list) # A list of numpy array
         fetched = sess.run(fetches, feed_dict=feed_dict)
+        var1 = sess.run(self.local_network.var_list) # After training
 
-        grads_and_vars = fetched[-1] # This is the grads and vars
-        grads_and_vars_data = pickle.dumps(grads_and_vars, -1)
-        self.msg_sent = socket_util.socket_send_data_chucks(self.sock, grads_and_vars_data, self.mcast_destination, self.msg_sent)
+        var_diff = [a - b for (a,b) in zip(var1, var0)]
+        var_diff_data = pickle.dumps(var_diff, -1)
 
-        # remote_grads_and_vars = grads_and_vars # TODO: @qiuwch, need to fix this
-        # self.opt.apply_gradients(remote_grads_and_vars)
+        if self.num_workers > 1:
+            self.msg_sent = socket_util.socket_send_data_chucks(self.sock, var_diff_data, self.mcast_destination, self.msg_sent)
 
-        # Handle each message in the socket queue
-        while not self.inc_msg_q.empty():
-            # Process received grads_and_vars from other peers
-            remote_grads_and_vars_data = inc_msg_q.get(False)
-            remote_grads_and_vars = pickle.loads(remote_grads_and_vars_data)
-            # self.opt.apply_gradients(remote_grads_and_vars) # TODO: @qiuwch, need to fix this
-            print('Apply remote gradients')
-            # apply_grad(grads) # Need to implement this @qiuwch
+            # Handle each message in the socket queue
+            while not self.inc_msg_q.empty():
+                # Process received grads_and_vars from other peers
+                remote_var_diff_data = inc_msg_q.get(False)
+                remote_var_diff = pickle.loads(remote_var_diff_data)
+
+                add_op = [a+b for (a,b) in zip(self.local_network.var_list, remote_var_diff)]
+                sess.run(add_op)
+                print('Apply remote gradients')
 
         if should_compute_summary:
             self.summary_writer.add_summary(tf.Summary.FromString(fetched[0]))
             self.summary_writer.flush()
         self.local_steps += 1
 
-        
-def stop_sock_listen_thread():
-    sock_listen_thread.stop()
 
-    
+def stop_sock_listen_thread():
+    if sock_listen_thread:
+        sock_listen_thread.stop()
+
 import atexit
 atexit.register(stop_sock_listen_thread)
