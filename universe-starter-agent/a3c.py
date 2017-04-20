@@ -279,7 +279,8 @@ process grabs a rollout that's been produced by the thread runner,
 and updates the parameters.  The update is then sent to the parameter
 server.
 """
-
+        global send_counter
+        
         #sess.run(self.sync)  # copy weights from shared to local
         rollout = self.pull_batch_from_queue()
         batch = process_rollout(rollout, gamma=0.99, lambda_=1.0)
@@ -311,17 +312,18 @@ server.
         var_diff_data = pickle.dumps(var_diff, -1)
 
         if self.num_workers > 1:
-            self.msg_sent = socket_util.socket_send_data_chucks(self.sock, var_diff_data, self.mcast_destination, self.msg_sent)
+            if self.local_steps % 5 == 0:
+                self.msg_sent = socket_util.socket_send_data_chucks(self.sock, var_diff_data, self.mcast_destination, self.msg_sent)
 
-            # Handle each message in the socket queue
-            while not self.inc_msg_q.empty():
-                # Process received grads_and_vars from other peers
-                remote_var_diff_data = inc_msg_q.get(False)
-                remote_var_diff = pickle.loads(remote_var_diff_data)
+                # Handle each message in the socket queue
+                while not self.inc_msg_q.empty():
+                    # Process received grads_and_vars from other peers
+                    remote_var_diff_data = inc_msg_q.get(False)
+                    remote_var_diff = pickle.loads(remote_var_diff_data)
 
-                add_op = [a+b for (a,b) in zip(self.local_network.var_list, remote_var_diff)]
-                sess.run(add_op)
-                print('Apply remote gradients')
+                    add_op = [a+b for (a,b) in zip(self.local_network.var_list, remote_var_diff)]
+                    sess.run(add_op)
+                    print('Apply remote gradients')
 
         if should_compute_summary:
             self.summary_writer.add_summary(tf.Summary.FromString(fetched[0]))
