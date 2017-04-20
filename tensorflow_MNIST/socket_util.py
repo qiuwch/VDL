@@ -30,9 +30,13 @@ class SockListenThread(threading.Thread):
 
     def run(self):
         while not self.stopped():
+            if verbose_lvl >= 3:
+                print "Entering recv cycle..."
             self.rcv_msg_num = socket_recv_chucked_data(self.sock, self.self_IP, self.inc_msg_q, self.num_peers, self.rcv_msg_num, self.verbose_lvl)
         # thread terminating
         time.sleep(1)
+        if verbose_lvl >= 3:
+            print "Entering final recv cycle..."
         self.rcv_msg_num = socket_recv_chucked_data(self.sock, self.self_IP, self.inc_msg_q, self.num_peers, self.rcv_msg_num, self.verbose_lvl)
         self.ret_val.put(self.rcv_msg_num)
     
@@ -167,6 +171,7 @@ def socket_recv_chucked_data(sock, self_IP, queue, num_peers, rcv_msg_num, verbo
                         sys.stdout.write('.')
                     if addr_dict[addr][0] == 0:
                         queue.put(addr_dict[addr][1])
+                        print(addr_dict[addr][1][:3]) #TODODO rm
                         queue_cnt += 1
                         addr_dict[addr] = [0, '']
                         if verbose_lvl >= 2:

@@ -139,13 +139,17 @@ def train(sess, mnist, sock, self_IP, mcast_destination, num_peers, my_peer_ID, 
     # Send delta_W, delta_b to other peers
     deltas = delta_W, delta_b
     deltas_data = pickle.dumps(deltas, -1)
-    msg_sent = socket_util.socket_send_data_chucks(sock, deltas_data, mcast_destination, msg_sent)
+    #TODODO re msg_sent = socket_util.socket_send_data_chucks(sock, deltas_data, mcast_destination, msg_sent)
+    msg_sent = socket_util.socket_send_data_chucks(sock, str(_).zfill(3) + deltas_data, mcast_destination, msg_sent)
     
     # Handle each message in the socket queue
-    while not inc_msg_q.empty():
+    num_new_msg = inc_msg_q.qsize()
+    if verbose_lvl >= 3:
+        print("Queue handle; num msg = ", num_new_msg)
+    for _ in xrange(num_new_msg):
         # Process received delta_W, delta_b from other peers
         other_deltas_data = inc_msg_q.get(False)
-        other_deltas = pickle.loads(other_deltas_data)
+        other_deltas = pickle.loads(other_deltas_data[3:]) #TODODO rev
         other_delta_W, other_delta_b = other_deltas
     
         # Update own model based on delta_W, delta_b from other peers
@@ -155,10 +159,13 @@ def train(sess, mnist, sock, self_IP, mcast_destination, num_peers, my_peer_ID, 
   sock_listen_thread.stop()
   rcv_msg_num = ret_val.get()
   # Handle last remaining message in the socket queue
-  while not inc_msg_q.empty():
+  num_new_msg = inc_msg_q.qsize()
+  if verbose_lvl >= 3:
+    print("final Queue handle; num msg = ", num_new_msg)
+  for _ in xrange(num_new_msg):
     # Process received delta_W, delta_b from other peers
     other_deltas_data = inc_msg_q.get(False)
-    other_deltas = pickle.loads(other_deltas_data)
+    other_deltas = pickle.loads(other_deltas_data[3:]) #TODODO rev
     other_delta_W, other_delta_b = other_deltas
 
     # Update own model based on delta_W, delta_b from other peers
