@@ -7,7 +7,15 @@ import six.moves.queue as queue
 import scipy.signal
 import threading
 import distutils.version
+
+import socket_util
+import Queue
+import cPickle as pickle
 use_tf12_api = distutils.version.LooseVersion(tf.VERSION) >= distutils.version.LooseVersion('0.12.0')
+sock_listen_thread = None
+
+import pdb
+
 
 def discount(x, gamma):
     return scipy.signal.lfilter([1], [1, -gamma], x[::-1], axis=0)[::-1]
@@ -180,93 +188,100 @@ runner appends the policy to the queue.
         yield rollout
 
 class A3C(object):
-    def __init__(self, env, task, visualise):
+    def __init__(self, env, task, visualise, num_workers, verbose_lvl):
         """
 An implementation of the A3C algorithm that is reasonably well-tuned for the VNC environments.
 Below, we will have a modest amount of complexity due to the way TensorFlow handles data parallelism.
 But overall, we'll define the model, specify its inputs, and describe how the policy gradients step
 should be computed.
 """
-
+        global sock_listen_thread
         self.env = env
         self.task = task
-        worker_device = "/job:worker/task:{}/cpu:0".format(task)
-        with tf.device(tf.train.replica_device_setter(1, worker_device=worker_device)):
-            with tf.variable_scope("global"):
-                self.network = LSTMPolicy(env.observation_space.shape, env.action_space.n)
-                self.global_step = tf.get_variable("global_step", [], tf.int32, initializer=tf.constant_initializer(0, dtype=tf.int32),
-                                                   trainable=False)
 
-        with tf.device(worker_device):
-            with tf.variable_scope("local"):
-                self.local_network = pi = LSTMPolicy(env.observation_space.shape, env.action_space.n)
-                pi.global_step = self.global_step
+        with tf.variable_scope("local"):
+            self.local_network = pi = LSTMPolicy(env.observation_space.shape, env.action_space.n)
+            self.local_network.global_step = tf.get_variable("global_step", [], tf.int32, initializer=tf.constant_initializer(0, dtype=tf.int32), trainable=False)
 
-            self.ac = tf.placeholder(tf.float32, [None, env.action_space.n], name="ac")
-            self.adv = tf.placeholder(tf.float32, [None], name="adv")
-            self.r = tf.placeholder(tf.float32, [None], name="r")
+        self.ac = tf.placeholder(tf.float32, [None, env.action_space.n], name="ac")
+        self.adv = tf.placeholder(tf.float32, [None], name="adv")
+        self.r = tf.placeholder(tf.float32, [None], name="r")
 
-            log_prob_tf = tf.nn.log_softmax(pi.logits)
-            prob_tf = tf.nn.softmax(pi.logits)
+        log_prob_tf = tf.nn.log_softmax(pi.logits)
+        prob_tf = tf.nn.softmax(pi.logits)
 
-            # the "policy gradients" loss:  its derivative is precisely the policy gradient
-            # notice that self.ac is a placeholder that is provided externally.
-            # adv will contain the advantages, as calculated in process_rollout
-            pi_loss = - tf.reduce_sum(tf.reduce_sum(log_prob_tf * self.ac, [1]) * self.adv)
+        # the "policy gradients" loss:  its derivative is precisely the policy gradient
+        # notice that self.ac is a placeholder that is provided externally.
+        # adv will contain the advantages, as calculated in process_rollout
+        pi_loss = - tf.reduce_sum(tf.reduce_sum(log_prob_tf * self.ac, [1]) * self.adv)
 
-            # loss of value function
-            vf_loss = 0.5 * tf.reduce_sum(tf.square(pi.vf - self.r))
-            entropy = - tf.reduce_sum(prob_tf * log_prob_tf)
+        # loss of value function
+        vf_loss = 0.5 * tf.reduce_sum(tf.square(pi.vf - self.r))
+        entropy = - tf.reduce_sum(prob_tf * log_prob_tf)
 
-            bs = tf.to_float(tf.shape(pi.x)[0])
-            self.loss = pi_loss + 0.5 * vf_loss - entropy * 0.01
+        bs = tf.to_float(tf.shape(pi.x)[0])
+        self.loss = pi_loss + 0.5 * vf_loss - entropy * 0.01
 
-            # 20 represents the number of "local steps":  the number of timesteps
-            # we run the policy before we update the parameters.
-            # The larger local steps is, the lower is the variance in our policy gradients estimate
-            # on the one hand;  but on the other hand, we get less frequent parameter updates, which
-            # slows down learning.  In this code, we found that making local steps be much
-            # smaller than 20 makes the algorithm more difficult to tune and to get to work.
-            self.runner = RunnerThread(env, pi, 20, visualise)
+        # 20 represents the number of "local steps":  the number of timesteps
+        # we run the policy before we update the parameters.
+        # The larger local steps is, the lower is the variance in our policy gradients estimate
+        # on the one hand;  but on the other hand, we get less frequent parameter updates, which
+        # slows down learning.  In this code, we found that making local steps be much
+        # smaller than 20 makes the algorithm more difficult to tune and to get to work.
+        self.runner = RunnerThread(env, pi, 20, visualise)
 
 
-            grads = tf.gradients(self.loss, pi.var_list)
+        grads = tf.gradients(self.loss, pi.var_list)
 
-            if use_tf12_api:
-                tf.summary.scalar("model/policy_loss", pi_loss / bs)
-                tf.summary.scalar("model/value_loss", vf_loss / bs)
-                tf.summary.scalar("model/entropy", entropy / bs)
-                tf.summary.image("model/state", pi.x)
-                tf.summary.scalar("model/grad_global_norm", tf.global_norm(grads))
-                tf.summary.scalar("model/var_global_norm", tf.global_norm(pi.var_list))
-                self.summary_op = tf.summary.merge_all()
+        if use_tf12_api:
+            tf.summary.scalar("model/policy_loss", pi_loss / bs)
+            tf.summary.scalar("model/value_loss", vf_loss / bs)
+            tf.summary.scalar("model/entropy", entropy / bs)
+            tf.summary.image("model/state", pi.x)
+            tf.summary.scalar("model/grad_global_norm", tf.global_norm(grads))
+            tf.summary.scalar("model/var_global_norm", tf.global_norm(pi.var_list))
+            self.summary_op = tf.summary.merge_all()
 
-            else:
-                tf.scalar_summary("model/policy_loss", pi_loss / bs)
-                tf.scalar_summary("model/value_loss", vf_loss / bs)
-                tf.scalar_summary("model/entropy", entropy / bs)
-                tf.image_summary("model/state", pi.x)
-                tf.scalar_summary("model/grad_global_norm", tf.global_norm(grads))
-                tf.scalar_summary("model/var_global_norm", tf.global_norm(pi.var_list))
-                self.summary_op = tf.merge_all_summaries()
+        else:
+            tf.scalar_summary("model/policy_loss", pi_loss / bs)
+            tf.scalar_summary("model/value_loss", vf_loss / bs)
+            tf.scalar_summary("model/entropy", entropy / bs)
+            tf.image_summary("model/state", pi.x)
+            tf.scalar_summary("model/grad_global_norm", tf.global_norm(grads))
+            tf.scalar_summary("model/var_global_norm", tf.global_norm(pi.var_list))
+            self.summary_op = tf.merge_all_summaries()
 
-            grads, _ = tf.clip_by_global_norm(grads, 40.0)
+        grads, _ = tf.clip_by_global_norm(grads, 40.0)
 
-            # copy weights from the parameter server to the local model
-            self.sync = tf.group(*[v1.assign(v2) for v1, v2 in zip(pi.var_list, self.network.var_list)])
+        grads_and_vars = list(zip(grads, pi.var_list))
+        inc_step = self.local_network.global_step.assign_add(tf.shape(pi.x)[0])
 
-            grads_and_vars = list(zip(grads, self.network.var_list))
-            inc_step = self.global_step.assign_add(tf.shape(pi.x)[0])
+        # each worker has a different set of adam optimizer parameters
+        self.opt = tf.train.AdamOptimizer(1e-4)
+        self.train_op = tf.group(self.opt.apply_gradients(grads_and_vars), inc_step)
 
-            # each worker has a different set of adam optimizer parameters
-            opt = tf.train.AdamOptimizer(1e-4)
-            self.train_op = tf.group(opt.apply_gradients(grads_and_vars), inc_step)
-            self.summary_writer = None
-            self.local_steps = 0
+        # Expose the gradients
+        self.grads_and_vars = grads_and_vars
+        self.summary_writer = None
+        self.local_steps = 0
+
+        # multicast setup
+        self.inc_msg_q = Queue.Queue()
+        self.ret_val = Queue.Queue()
+        self.msg_sent = 0
+        self.num_workers = num_workers
+
+        if self.num_workers > 1: # Only wait when we are using mutilple workers
+            self.sock, self_IP, self.mcast_destination = socket_util.set_up_UDP_mcast_peer()
+            sock_listen_thread = socket_util.SockListenThread(self.sock, self_IP, self.inc_msg_q, num_workers, self.ret_val, verbose_lvl)
+            #TODO while waiting, other stuff are still happening
+            socket_util.await_start_mcast(self.sock)
 
     def start(self, sess, summary_writer):
         self.runner.start_runner(sess, summary_writer)
         self.summary_writer = summary_writer
+        if sock_listen_thread:
+            sock_listen_thread.start()
 
     def pull_batch_from_queue(self):
         """
@@ -286,27 +301,19 @@ process grabs a rollout that's been produced by the thread runner,
 and updates the parameters.  The update is then sent to the parameter
 server.
 """
-
-        # TODO: @Vincent Replace sync operator with multicase communication
-        sess.run(self.sync)  # copy weights from shared to local
+        global send_counter
+        
+        #sess.run(self.sync)  # copy weights from shared to local
         rollout = self.pull_batch_from_queue()
         batch = process_rollout(rollout, gamma=0.99, lambda_=1.0)
 
         should_compute_summary = self.task == 0 and self.local_steps % 11 == 0
 
         if should_compute_summary:
-            # TODO: @Vincent Add gradient information into fetch list, so that we can get gradients from the computation.
-            # See
-            # `grads_and_vars = list(zip(grads, self.network.var_list))`
-            # and
-            # `self.train_op = tf.group(opt.apply_gradients(grads_and_vars), inc_step)``
-            # Search this file to find these two lines.
-            # I did not use line number because it might change
-            # @Vincent, the loop is executed in worker.py:L81
-
-            fetches = [self.summary_op, self.train_op, self.global_step]
+            fetches = [self.summary_op, self.train_op]
         else:
-            fetches = [self.train_op, self.global_step]
+            fetches = [self.train_op]
+
 
         feed_dict = {
             self.local_network.x: batch.si,
@@ -317,9 +324,38 @@ server.
             self.local_network.state_in[1]: batch.features[1],
         }
 
+        # Get current trainable variables
+        # This is trainable variables
+        var0 = sess.run(self.local_network.var_list) # A list of numpy array
         fetched = sess.run(fetches, feed_dict=feed_dict)
+        var1 = sess.run(self.local_network.var_list) # After training
+
+        var_diff = [a - b for (a,b) in zip(var1, var0)]
+        var_diff_data = pickle.dumps(var_diff, -1)
+
+        if self.num_workers > 1:
+            if self.local_steps % 5 == 0:
+                self.msg_sent = socket_util.socket_send_data_chucks(self.sock, var_diff_data, self.mcast_destination, self.msg_sent)
+
+                # Handle each message in the socket queue
+                while not self.inc_msg_q.empty():
+                    # Process received grads_and_vars from other peers
+                    remote_var_diff_data = inc_msg_q.get(False)
+                    remote_var_diff = pickle.loads(remote_var_diff_data)
+
+                    add_op = [a+b for (a,b) in zip(self.local_network.var_list, remote_var_diff)]
+                    sess.run(add_op)
+                    print('Apply remote gradients')
 
         if should_compute_summary:
-            self.summary_writer.add_summary(tf.Summary.FromString(fetched[0]), fetched[-1])
+            self.summary_writer.add_summary(tf.Summary.FromString(fetched[0]))
             self.summary_writer.flush()
         self.local_steps += 1
+
+
+def stop_sock_listen_thread():
+    if sock_listen_thread:
+        sock_listen_thread.stop()
+
+import atexit
+atexit.register(stop_sock_listen_thread)
