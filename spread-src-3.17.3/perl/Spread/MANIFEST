@@ -1,7 +1,0 @@
-MANIFEST
-Makefile.PL
-README
-Spread.pm
-Spread.xs
-test.pl
-typemap
