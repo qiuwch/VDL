@@ -103,19 +103,56 @@ that would constantly interact with the environment and tell it what to do.  Thi
 
 class SocketRecvThread(threading.Thread):
     #thread in learner
+    def __init__(self, connection_socket, env, policy, num_local_steps, summary_writer, render, terminal, rollout):
+        super(SocketRecvThread, self).__init__()
+        self.connection_socket = sonnection_socket
+        self.env = env
+        self.policy = policy
+        self.num_local_steps = num_local_steps
+        self.summary_writer = summary_writer
+        self.render = render
+        self.terminal = terminal
+        self.rollout = rollout
+        self.buffer_size = 1400
+
+    def _recv(self, count):
+        data = self.connection_socket.recv(count)
+
+    def _frag_recv(self, mess_len):
+        mess_remain = mess_len
+        mess = ''
+        if mess_remain > 0:
+            mess_temp = self._recv(min(mess_remain, self.buffer_size))
+            mess += mess_temp
+            mess_remain -= len(mess_temp)
+        return mess
+
     def run(self):
-        for _ in range(num_local_steps):
+        for _ in range(self.num_local_steps):
             # TODO: @qiuwch, Replace policy.act to action from learner
             fetched = policy.act(last_state, *last_features)
             action, value_, features = fetched[0], fetched[1], fetched[2:]
             # argmax to convert from one-hot
-            state, reward, terminal, info = env.step(action.argmax())
+
+            self.connection_socket.send(struct.pack('I', action.argmax()))
+
+            #state, reward, terminal, info = env.step(action.argmax())
+
             if render:
                 env.render()
 
             # collect the experience
             # TODO: @qiuwch, Replace rollout.add to a function sending message back to the learner
-            rollout.add(last_state, action, reward, value_, terminal, last_features)
+
+            raw_message_len = self._recv(4)
+            if raw_message_len:
+                message_len = struct.unpack('I', raw_message_len)[0]
+                message = self._frag_recv(message_len)
+                recovered_message = cPickle.loads(message)
+
+            self.terminal = recovered_message['terminal']
+
+            self.rollout.add(last_state, action, recovered_massage['reward'], value_, terminal, last_features)
             length += 1
             rewards += reward
 
@@ -159,19 +196,27 @@ runner appends the policy to the queue.
     rewards = 0
 
     client_addrs = []
-    recv_threads = []
+    #recv_threads = []
+    conn_sockets = []
     for i in range(0, 2):
         connection_socket, addr = server_socket.accept()
         client_addrs.append(addr)
-        recv_thread = SocketRecvThread(connection_socket)
-        recv_threads.append(recv_thread)
+        conn_sockets.append(connection_socket)
+        #recv_thread = SocketRecvThread(connection_socket)
+        #recv_threads.append(recv_thread)
 
     while True:
         terminal_end = False
         rollout = PartialRollout()
+        recv_threads = []
 
-        for thread in recv_threads:
-            thread.start()
+        for i in range(0, 2):
+            recv_thread = SocketRecvThread(conn_sockets[i], env, policy, num_local_steps, summary_writer, render, terminal_end, rollout)
+            recv_threads.append(recv.thread)
+            recv.thread.start()
+
+        #for thread in recv_threads:
+        #    thread.start()
 
         for thread in recv_threads:
             thread.join()
