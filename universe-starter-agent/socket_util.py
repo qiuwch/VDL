@@ -145,22 +145,32 @@ def socket_recv_chucked_data(sock, self_IP, queue, num_peers, rcv_msg_num, verbo
             elif addr not in addr_dict  or  addr_dict[addr][0] == 0:
                 # if no "Arnold":
                 if msg[0 : params.LEN_IMAGE_SIZE_PACKET_TAG] != params.IMAGE_SIZE_PACKET_TAG:
+                    if verbose_lvl >= 1:
+                        print('Warning: received fragment without head fragment')
                     continue
                 else:
                     data_len = int(msg[params.LEN_IMAGE_SIZE_PACKET_TAG :])
                     addr_dict[addr] = [data_len, '']
+                    if verbose_lvl >= 2:
+                        print('received head fragment')
             else:
                 # if "Arnold":
                 if msg[0 : params.LEN_IMAGE_SIZE_PACKET_TAG] == params.IMAGE_SIZE_PACKET_TAG:
                     data_len = int(msg[params.LEN_IMAGE_SIZE_PACKET_TAG :])
                     addr_dict[addr] = [data_len, '']
+                    if verbose_lvl >= 1:
+                        print('Warning: Received head fragment without completing previous packet')
                 else:
                     addr_dict[addr][0] -= len(msg)
                     addr_dict[addr][1] += msg
+                    if verbose_lvl >= 2:
+                        print('received fragment')
                     if addr_dict[addr][0] == 0:
                         queue.put(addr_dict[addr][1])
                         queue_cnt += 1
-                        addr_dict[addr] = [0, '']               
+                        addr_dict[addr] = [0, '']
+                        if verbose_lvl >= 2:
+                            print('Full packet received; adding to queue')
     except socket.timeout:
         if verbose_lvl >= 1:
             print('socket_recv_chucked_data timed out')
