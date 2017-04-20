@@ -15,6 +15,8 @@ parser.add_argument('--log')
 
 args = parser.parse_args()
 
+throughput = Counter("Throughput")
+
 env = gym.make(args.task)
 
 class SocketRecvThread(threading.Thread):
@@ -58,6 +60,7 @@ class SocketRecvThread(threading.Thread):
             if raw_message_len:
                 message_len = struct.unpack('I', raw_message_len)[0]
                 message = self._frag_recv(message_len)
+                throughput.add(len(message)+4)
                 # raw_message_len = self._recv(4)
                 # message_len = struct.unpack('I', raw_message_len)[0]
                 # message = self._frag_recv(message_len+2)
@@ -100,7 +103,8 @@ def main():
     t1 = time.time()
     total_time = (t1 - t0)
     print 'Total time in learner: ', total_time
-
+    print throughput
+ 
     # Log is a summary with all the information related to this experiment
     if args.log:
         with open(args.log, 'w') as f:

@@ -32,6 +32,7 @@ compress_timer = Timer("Compression")
 compute_timer = Timer("Computation")
 throughput_counter = Counter("Network Throughput")
 total_timer = Timer("Total")
+frame_count = Counter("frame count")
 
 def send_payload(connection_socket, payload):
     # Make sure payload is a bytearray
@@ -43,10 +44,10 @@ def send_payload(connection_socket, payload):
 def serialize_numpy(arr):
     # http://stackoverflow.com/questions/30167538/convert-a-numpy-ndarray-to-stringor-bytes-and-convert-it-back-to-numpy-ndarray
     payload = arr.tostring()
-    payload = zlib.compress(payload)
+    #payload = zlib.compress(payload)
     return payload
 
-def send_us(observation, reward):
+def send_us(observation, reward, done):
     # It seems this function call takes a unreasonable amount of time
     # Does a deep copy happen in here?
     if args.compress:
@@ -59,6 +60,8 @@ def send_us(observation, reward):
 
     send_timer.tic()
     send_payload(clientSocket, payload)
+    connection_socket.send(struct.pack('I', reward))
+    connection_sozket.send(struct.pack('I', done))
     send_timer.toc()
 
 
@@ -67,27 +70,28 @@ def main():
     total_timer.tic()
     for i_episode in range(100):
         observation = env.reset()
-        log(observation)
-        send_us(observation, 0)
+        #log(observation)
+        send_us(observation, 0, False, dict(extra_field=''))
         # !!! Do not do str(observation) in the debug code, this operation is very expensive !!!
         for t in range(100):
             # print "Episode: %d      Iter: %d" % (i_episode, t)
             #env.render()
-            compute_timer.tic()
-            action = env.action_space.sample()
-            compute_timer.toc()
+            #compute_timer.tic()
+            #action = env.action_space.sample()
+            #compute_timer.toc()
             #try:
             # action = 0
             # send_timer.tic()
-            # raw_action = clientSocket.recv(4)
-            # action = struct.unpack('I', raw_action)[0]
+            raw_action = clientSocket.recv(4)
+            action = struct.unpack('I', raw_action)[0]
             # send_timer.toc()
 
             compute_timer.tic()
             observation, reward, done, info = env.step(action)
             compute_timer.toc()
 
-            send_us(observation, reward)
+            send_us(observation, reward, done)
+            frame_count.add(1)
 
             if done:
                 log("Episode finished after {} timesteps".format(t+1))
@@ -106,6 +110,7 @@ def main():
     print compress_timer
     print throughput_counter
     print 'Speed: %.2fKB/s' % (throughput_counter.sum / send_timer.total / 1000.0)
+    print frame_count
 
     # Print how much time is spent in the env.step and how much time is spent in sending messages
 
