@@ -1,0 +1,11 @@
+CHANGES
+LICENSE
+MANIFEST
+MANIFEST.in
+Makefile
+README
+TODO.txt
+doc.txt
+setup.py
+spreadmodule.c
+testspread.py
