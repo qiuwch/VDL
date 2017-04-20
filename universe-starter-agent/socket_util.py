@@ -30,9 +30,13 @@ class SockListenThread(threading.Thread):
 
     def run(self):
         while not self.stopped():
+            if self.verbose_lvl >= 3:
+                print "Entering recv cycle..."
             self.rcv_msg_num = socket_recv_chucked_data(self.sock, self.self_IP, self.inc_msg_q, self.num_peers, self.rcv_msg_num, self.verbose_lvl)
         # thread terminating
         time.sleep(1)
+        if self.verbose_lvl >= 3:
+            print "Entering final recv cycle..."
         self.rcv_msg_num = socket_recv_chucked_data(self.sock, self.self_IP, self.inc_msg_q, self.num_peers, self.rcv_msg_num, self.verbose_lvl)
         self.ret_val.put(self.rcv_msg_num)
     
@@ -140,12 +144,12 @@ def socket_recv_chucked_data(sock, self_IP, queue, num_peers, rcv_msg_num, verbo
             msg, (addr, port) = sock.recvfrom(params.MAX_PACKET_SIZE)
             rcv_msg_num += 1
             if addr == self_IP:
-                rcv_msg_num -= 1
+                #TODO re rcv_msg_num -= 1
                 continue
             elif addr not in addr_dict  or  addr_dict[addr][0] == 0:
                 # if no "Arnold":
                 if msg[0 : params.LEN_IMAGE_SIZE_PACKET_TAG] != params.IMAGE_SIZE_PACKET_TAG:
-                    if verbose_lvl >= 1:
+                    if verbose_lvl >= 2:
                         print('Warning: received fragment without head fragment')
                     continue
                 else:
@@ -158,15 +162,16 @@ def socket_recv_chucked_data(sock, self_IP, queue, num_peers, rcv_msg_num, verbo
                 if msg[0 : params.LEN_IMAGE_SIZE_PACKET_TAG] == params.IMAGE_SIZE_PACKET_TAG:
                     data_len = int(msg[params.LEN_IMAGE_SIZE_PACKET_TAG :])
                     addr_dict[addr] = [data_len, '']
-                    if verbose_lvl >= 1:
+                    if verbose_lvl >= 2:
                         print('Warning: Received head fragment without completing previous packet')
                 else:
                     addr_dict[addr][0] -= len(msg)
                     addr_dict[addr][1] += msg
                     if verbose_lvl >= 2:
-                        print('received fragment')
+                        sys.stdout.write('.')
                     if addr_dict[addr][0] == 0:
                         queue.put(addr_dict[addr][1])
+                        print(addr_dict[addr][1][:3]) #TODODO rm
                         queue_cnt += 1
                         addr_dict[addr] = [0, '']
                         if verbose_lvl >= 2:
