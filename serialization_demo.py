@@ -25,4 +25,4 @@ bytearr = searialize_pickle(data)
 
 recovered_data = deserialize_pickle(bytearr)
 
-print recovered_data
+print recovered_data['terminal']

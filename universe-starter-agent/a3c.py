@@ -101,23 +101,9 @@ that would constantly interact with the environment and tell it what to do.  Thi
 
             self.queue.put(next(rollout_provider), timeout=600.0)
 
-
-
-def env_runner(env, policy, num_local_steps, summary_writer, render):
-    """
-The logic of the thread runner.  In brief, it constantly keeps on running
-the policy, and as long as the rollout exceeds a certain length, the thread
-runner appends the policy to the queue.
-"""
-    last_state = env.reset()
-    last_features = policy.get_initial_features()
-    length = 0
-    rewards = 0
-
-    while True:
-        terminal_end = False
-        rollout = PartialRollout()
-
+class SocketRecvThread(threading.Thread):
+    #thread in learner
+    def run(self):
         for _ in range(num_local_steps):
             # TODO: @qiuwch, Replace policy.act to action from learner
             fetched = policy.act(last_state, *last_features)
@@ -156,6 +142,39 @@ runner appends the policy to the queue.
 
         if not terminal_end:
             rollout.r = policy.value(last_state, *last_features)
+
+        # once we have enough experience, yield it, and have the ThreadRunner place it on a queue
+        #yield rollout
+
+
+def env_runner(env, policy, num_local_steps, summary_writer, render):
+    """
+The logic of the thread runner.  In brief, it constantly keeps on running
+the policy, and as long as the rollout exceeds a certain length, the thread
+runner appends the policy to the queue.
+"""
+    last_state = env.reset()
+    last_features = policy.get_initial_features()
+    length = 0
+    rewards = 0
+
+    client_addrs = []
+    recv_threads = []
+    for i in range(0, 2):
+        connection_socket, addr = server_socket.accept()
+        client_addrs.append(addr)
+        recv_thread = SocketRecvThread(connection_socket)
+        recv_threads.append(recv_thread)
+
+    while True:
+        terminal_end = False
+        rollout = PartialRollout()
+
+        for thread in recv_threads:
+            thread.start()
+
+        for thread in recv_threads:
+            thread.join()
 
         # once we have enough experience, yield it, and have the ThreadRunner place it on a queue
         yield rollout

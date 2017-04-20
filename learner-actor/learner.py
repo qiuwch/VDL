@@ -2,6 +2,7 @@ import sys, socket, struct, time, errno, atexit, argparse, json, threading, date
 import gym
 from util import Counter
 import dummy_env
+import cPickle
 try:
     import ppaquette_gym_doom
 except:
@@ -61,6 +62,9 @@ class SocketRecvThread(threading.Thread):
                 message_len = struct.unpack('I', raw_message_len)[0]
                 message = self._frag_recv(message_len)
                 throughput.add(len(message)+4)
+
+                recovered_message = cPickle.loads(message)
+
                 # raw_message_len = self._recv(4)
                 # message_len = struct.unpack('I', raw_message_len)[0]
                 # message = self._frag_recv(message_len+2)
@@ -71,8 +75,8 @@ class SocketRecvThread(threading.Thread):
                 #     reward = message.split('_')[1]
                     # log('re_%d:' % i + str(reward))
 
-                # action = env.action_space.sample() # based on observation and reward
-                # self.connection_socket.send(struct.pack('I', action))
+                action = env.action_space.sample() # based on observation and reward
+                self.connection_socket.send(struct.pack('I', action))
 
 
 def log(msg): # Use log function, so that I am able to disable the verbose output
@@ -98,13 +102,15 @@ def main():
         thread.start()
 
     t0 = time.time()
+    print 't0'
     for thread in recv_threads:
         thread.join()
+    print 't1'
     t1 = time.time()
     total_time = (t1 - t0)
     print 'Total time in learner: ', total_time
     print throughput
- 
+
     # Log is a summary with all the information related to this experiment
     if args.log:
         with open(args.log, 'w') as f:
