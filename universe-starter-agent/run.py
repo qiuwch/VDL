@@ -35,7 +35,7 @@ def run(args, server):
         variables_to_save = [v for v in tf.all_variables() if not v.name.startswith("local")]
         init_op = tf.initialize_variables(variables_to_save)
         init_all_op = tf.initialize_all_variables()
-    saver = FastSaver(variables_to_save, max_to_keep=0)
+    saver = FastSaver(variables_to_save)
 
     var_list = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, tf.get_variable_scope().name)
     logger.info('Trainable vars:')

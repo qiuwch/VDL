@@ -1,0 +1,2 @@
+arm-pose/log/** filter=lfs diff=lfs merge=lfs -text
+universe-starter-agent/train-log/** filter=lfs diff=lfs merge=lfs -text
