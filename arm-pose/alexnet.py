@@ -41,6 +41,13 @@ class LinearToy(Net):
         return tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 class AlexNet(Net):
+    def __init__(self):
+        self.var_list = []
+
+    def get_var_list(self):
+        self.var_list = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, tf.get_variable_scope().name)
+        return self.var_list
+
     def input_graph(self):
         image_batch = tf.placeholder(tf.float32, shape=[None, w, h, 3])
         label_batch = tf.placeholder(tf.float32, shape=[None, 6])

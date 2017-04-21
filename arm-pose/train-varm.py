@@ -18,8 +18,8 @@ tf.app.flags.DEFINE_string('checkpoint_dir', 'tmp', 'Checkpoint directory')
 def train():
     # labels are 6 numbers, camera pos (3), arm configuration (3)
     # images are with random lighting and random texture color
-    # net = alexnet.AlexNet()
-    net = alexnet.LinearToy()
+    net = alexnet.AlexNet()
+    # net = alexnet.LinearToy()
     # data = varm.RandomDataset()
     data = varm.VarmDataset()
 
@@ -29,8 +29,12 @@ def train():
     [train_op, grad_step] = net.train_step(loss)
     # grad_step = tf.train.AdamOptimizer(learning_rate = 1e-4).compute_gradients(loss)
 
-    print_grad = True
-    random_check = True
+    var_list = net.get_var_list()
+    print [(v.name, v.get_shape()) for v in var_list]
+
+
+    print_grad = 0
+    random_check = 1
     save_step = 100
 
     def _format_array(arr):
@@ -82,6 +86,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--train', action='store_true', default=True, help='Do training')
     parser.add_argument('--test', action='store_true', help='Do testing')
+    parser.add_argument('--logdir', default='pose_log')
 
     args = parser.parse_args()
 
