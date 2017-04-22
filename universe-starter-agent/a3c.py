@@ -117,7 +117,7 @@ that would constantly interact with the environment and tell it what to do.  Thi
 
 
 class SocketRecvThread(threading.Thread):
-    def __init__(self, connection_socket, env, policy, num_local_steps, summary_writer, render, global_rollout):
+    def __init__(self, connection_socket, env, policy, num_local_steps, summary_writer, render, global_rollout, sess):
 #        super(SocketRecvThread, self).__init__()
         threading.Thread.__init__(self)
         self.connection_socket = connection_socket
@@ -129,6 +129,7 @@ class SocketRecvThread(threading.Thread):
         self.global_rollout = global_rollout
         self.buffer_size = 1400
         self.daemon = True
+        self.sess = sess
         print ('55555')
 
     def _frag_recv(self, mess_len):
@@ -141,6 +142,10 @@ class SocketRecvThread(threading.Thread):
         return mess
 
     def run(self):
+        with self.sess.as_default():
+            self._run()
+
+    def _run(self):
         print ('66666')
         last_state = self.env.reset()
         last_features = self.policy.get_initial_features()
@@ -269,7 +274,7 @@ runner appends the policy to the queue.
     for i in range(0, num_actors):
         connection_socket, addr = server_socket.accept()
         client_addrs.append(addr)
-        recv_thread = SocketRecvThread(connection_socket, env, policy, num_local_steps, summary_writer, render, rollout)
+        recv_thread = SocketRecvThread(connection_socket, env, policy, num_local_steps, summary_writer, render, rollout, tf.get_default_session())
         recv_threads.append(recv_thread)
         recv_thread.start()
 
