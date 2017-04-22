@@ -24,7 +24,7 @@ class FastSaver(tf.train.Saver):
 
 def run(args):
     env = create_env(args.env_id, client_id=str(args.task), remotes=args.remotes)
-    trainer = A3C(env, args.task, args.visualise, args.num_workers, args.verbose_lvl)
+    trainer = A3C(env, args.task, args.visualise, args.num_workers, args.verbose_lvl, args.port, args.num_actors)
 
     # Variable names that start with "local" are not saved in checkpoints.
     if use_tf12_api:
@@ -59,6 +59,7 @@ def run(args):
     logger.info(
         "Starting session. If this hangs, we're mostly likely waiting to connect to the parameter server. " +
         "One common cause is that the parameter server DNS name isn't resolving yet, or is misspecified.")
+    print ('ccccc')
     with tf.Session() as sess:
         init = tf.global_variables_initializer()
         sess.run(init)
@@ -87,6 +88,9 @@ Setting up Tensorflow for data parallel work
     # Add visualisation argument
     parser.add_argument('--visualise', action='store_true',
                         help="Visualise the gym environment by running env.render() between each timestep")
+
+    parser.add_argument('--port', type=int, default=10000)
+    parser.add_argument('--num-actors', type=int, default=1)
 
     args = parser.parse_args()
     run(args)

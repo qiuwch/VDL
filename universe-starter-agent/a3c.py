@@ -8,6 +8,8 @@ import scipy.signal
 import threading
 import distutils.version
 
+import socket
+
 import socket_util
 import Queue
 import cPickle as pickle
@@ -79,7 +81,7 @@ One of the key distinctions between a normal environment and a universe environm
 is that a universe environment is _real time_.  This means that there should be a thread
 that would constantly interact with the environment and tell it what to do.  This thread is here.
 """
-    def __init__(self, env, policy, num_local_steps, visualise):
+    def __init__(self, env, policy, num_local_steps, visualise, port, num_actors):
         threading.Thread.__init__(self)
         self.queue = queue.Queue(5)
         self.num_local_steps = num_local_steps
@@ -90,6 +92,9 @@ that would constantly interact with the environment and tell it what to do.  Thi
         self.sess = None
         self.summary_writer = None
         self.visualise = visualise
+        self.port = port
+        self.num_actors = num_actors
+        print ('22222')
 
     def start_runner(self, sess, summary_writer):
         self.sess = sess
@@ -101,7 +106,8 @@ that would constantly interact with the environment and tell it what to do.  Thi
             self._run()
 
     def _run(self):
-        rollout_provider = env_runner(self.env, self.policy, self.num_local_steps, self.summary_writer, self.visualise)
+        print ('44444')
+        rollout_provider = env_runner(self.env, self.policy, self.num_local_steps, self.summary_writer, self.visualise, self.port, self.num_actors)
         while True:
             # the timeout variable exists because apparently, if one worker dies, the other workers
             # won't die with it, unless the timeout is set to some large number.  This is an empirical
@@ -110,13 +116,98 @@ that would constantly interact with the environment and tell it what to do.  Thi
             self.queue.put(next(rollout_provider), timeout=600.0)
 
 
+class SocketRecvThread(threading.Thread):
+    def __init__(self, connection_socket, env, policy, num_local_steps, summary_writer, render, global_rollout):
+#        super(SocketRecvThread, self).__init__()
+        threading.Thread.__init__(self)
+        self.connection_socket = connection_socket
+        self.env = env
+        self.policy = policy
+        self.num_local_steps = num_local_steps
+        self.summary_writer = summary_writer
+        self.render = render
+        self.global_rollout = global_rollout
+        self.buffer_size = 1400
+        self.daemon = True
+        print ('55555')
 
-def env_runner(env, policy, num_local_steps, summary_writer, render):
+    def _frag_recv(self, mess_len):
+        mess_remain = mess_len
+        mess = ''
+        while mess_remain > 0:
+            mess_temp = self.connection_socket.recv(min(mess_remain, self.buffer_size))
+            mess += mess_temp
+            mess_remain -= len(mess_temp)
+        return mess
+
+    def run(self):
+        print ('66666')
+        last_state = self.env.reset()
+        last_features = self.policy.get_initial_features()
+        length = 0
+        rewards = 0
+
+        while True:
+            terminal_end = False
+            rollout = PartialRollout()
+
+            for _ in range(self.num_local_steps):
+                print ('aaaaa')
+                fetched = self.policy.act(last_state, *last_features)
+                action, value_, features = fetched[0], fetched[1], fetched[2:]
+                # argmax to convert from one-hot
+                #state, reward, terminal, info = env.step(action.argmax())
+                print ('88888') 
+                print (fetched)
+                print (action)
+                self.connection_socket.send(struct.pack('I', action.argmax()))
+
+                if self.render:
+                    self.env.render()
+
+                # collect the experience
+                raw_message_len = self.connection_socket.recv(4)
+                if raw_message_len:
+                    message_len = struct.unpack('I', raw_message_len)[0]
+                    message = self._frag_recv(message_len)
+                    recovered_message = cPickle.loads(message)
+
+                rollout.add(last_state, action, recovered_message['reward'], value_, recovered_message['terminal'], last_features)
+                length += 1
+                rewards += reward
+
+                last_state = recovered_message['state']
+                last_features = features
+
+                if recovered_message['info']:
+                    summary = tf.Summary()
+                    for k, v in recovered_message['info'].items():
+                        summary.value.add(tag=k, simple_value=float(v))
+                    summary_writer.add_summary(summary, policy.global_step.eval())
+                    summary_writer.flush()
+
+                timestep_limit = env.spec.tags.get('wrapper_config.TimeLimit.max_episode_steps')
+                if recovered_message['terminal'] or length >= timestep_limit:
+                    terminal_end = True
+                    if length >= timestep_limit or not env.metadata.get('semantics.autoreset'):
+                        last_state = self.env.reset()
+                    last_features = self.policy.get_initial_features()
+                    print("Episode finished. Sum of rewards: %d. Length: %d" % (rewards, length))
+                    length = 0
+                    rewards = 0
+                    break
+
+            if not terminal_end:
+                rollout.r = policy.value(last_state, *last_features)
+
+            self.global_rollout = rollout
+
+
+def env_runner(env, policy, num_local_steps, summary_writer, render, port, num_actors):
     """
 The logic of the thread runner.  In brief, it constantly keeps on running
 the policy, and as long as the rollout exceeds a certain length, the thread
 runner appends the policy to the queue.
-"""
     last_state = env.reset()
     last_features = policy.get_initial_features()
     length = 0
@@ -164,12 +255,34 @@ runner appends the policy to the queue.
 
         if not terminal_end:
             rollout.r = policy.value(last_state, *last_features)
+"""
+    last_rollout = PartialRollout()
+    rollout = last_rollout
 
-        # once we have enough experience, yield it, and have the ThreadRunner place it on a queue
-        yield rollout
+    server_port = port
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind(('', server_port))
+    server_socket.listen(5)
 
+    client_addrs = []
+    recv_threads = []
+    for i in range(0, num_actors):
+        connection_socket, addr = server_socket.accept()
+        client_addrs.append(addr)
+        recv_thread = SocketRecvThread(connection_socket, env, policy, num_local_steps, summary_writer, render, rollout)
+        recv_threads.append(recv_thread)
+        recv_thread.start()
+
+    print ('77777')
+    while True:
+        if rollout != last_rollout:
+            print ('bbbbb')
+            # once we have enough experience, yield it, and have the ThreadRunner place it on a queue
+            yield rollout
+            last_rollout = rollout
+ 
 class A3C(object):
-    def __init__(self, env, task, visualise, num_workers, verbose_lvl):
+    def __init__(self, env, task, visualise, num_workers, verbose_lvl, port, num_actors):
         """
 An implementation of the A3C algorithm that is reasonably well-tuned for the VNC environments.
 Below, we will have a modest amount of complexity due to the way TensorFlow handles data parallelism.
@@ -209,8 +322,8 @@ should be computed.
         # on the one hand;  but on the other hand, we get less frequent parameter updates, which
         # slows down learning.  In this code, we found that making local steps be much
         # smaller than 20 makes the algorithm more difficult to tune and to get to work.
-        self.runner = RunnerThread(env, pi, 20, visualise)
-
+        print ('11111')
+        self.runner = RunnerThread(env, pi, 20, visualise, port, num_actors)
 
         grads = tf.gradients(self.loss, pi.var_list)
 
@@ -259,6 +372,7 @@ should be computed.
             socket_util.await_start_mcast(self.sock)
 
     def start(self, sess, summary_writer):
+        print ('33333')
         self.runner.start_runner(sess, summary_writer)
         self.summary_writer = summary_writer
         if sock_listen_thread:
@@ -268,7 +382,7 @@ should be computed.
         """
 self explanatory:  take a rollout from the queue of the thread runner.
 """
-        rollout = self.runner.queue.get(timeout=600.0)
+        rollout = self.runner.queue.get(True)
         while not rollout.terminal:
             try:
                 rollout.extend(self.runner.queue.get_nowait())
