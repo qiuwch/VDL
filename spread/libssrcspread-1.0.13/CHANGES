@@ -1,0 +1,181 @@
+Release Notes - libssrcspread - Version 1.0.13 (2017-04-11)
+
+** New Feature
+    * [SPRD-5] - Add Error::IllegalTime corresponding to Spread 5.0
+                 ILLEGAL_TIME error
+
+Release Notes - libssrcspread - Version 1.0.12 (2016-08-27)
+
+** Task
+    * [SPRD-4] - Correct Timeout documentation typo
+
+Release Notes - libssrcspread - Version 1.0.11 (2015-05-10)
+
+** Defect
+    * [SPRD-3] - Fix GCC 4.9/5.1 compilation errors
+
+Release Notes - libssrcspread - Version 1.0.10 (2014-06-07)
+
+** Task
+    * [SPRD-2] - Fix various documentation and build issues
+
+Release Notes - libssrcspread - Version 1.0.9 (2011-05-11)
+
+** Task
+    * [SPRD-1] - Replace cppunit unit tests with Boost.Test
+    * [No Issue] - Port unit tests and build system to Python3
+    * [No Issue] - Port unit tests to Perl 5.12
+    * [No Issue] - Port unit tests to Ruby 1.9.x
+    * [No Issue] - Use libtool library versioning scheme (e.g., 1.9.0
+                   for interface version 1, revision 9, age 0)
+
+Release Notes - libssrcspread - Version 1.0.8
+
+** Improvement
+    * [No Issue] - Add begin()/rbegin() end/rend() iterator functions
+                   to Message via Buffer
+
+Release Notes - libssrcspread - Version 1.0.7
+
+** Improvement
+    * [No Issue] - Set FD_CLOEXEC on Spread connection file descriptor
+                   in Mailbox constructor
+
+Release Notes - libssrcspread - Version 1.0.6
+
+** Improvement
+    * [No Issue] - Fix Mac OS X compilation with GCC 4.4.x
+
+Release Notes - libssrcspread - Version 1.0.5
+
+** Improvement
+    * [No Issue] - Adjust build system to compile on Mac OS X
+    * [No Issue] - Adjust build system to compile SWIG modules properly
+                   with libtool 2.2
+
+Release Notes - Ssrc C++/Lua/Perl/Python/Ruby Bindings for Spread -
+                Version 1.0.4
+** Improvement
+    * [SPRD-30] - Disable exception specifications for C++ compilation,
+                  but expose to SWIG wrapper generator
+
+Release Notes - Ssrc C++/Lua/Perl/Python/Ruby Bindings for Spread -
+                Version 1.0.3
+** Improvement
+    * [SPRD-28] - Facilitate compilation for Solaris 10 and FreeBSD 7.1
+** New Feature
+    * [SPRD-27] - Add --disable-perl, --disable-lua, etc. configure flags
+** Task
+    * [SPRD-29] - Change all sava:: namespaces and SAVA_ macros to ssrc::
+                  and SSRC_
+
+Release Notes - Sava C++/Lua/Perl/Python/Ruby Bindings for Spread -
+                Version 1.0.2
+** New Feature
+    * [SPRD-9] - Add --disable-namespace-versioning
+
+Release Notes - Sava C++/Lua/Perl/Python/Ruby Bindings for Spread -
+                Version 1.0.1
+** Bug
+    * [SPRD-26] - Add missing SWIG binding to specify connection timeout
+** Improvement
+    * [SPRD-25] - Add exception-handling unit tests for all SWIG bindings
+** Task
+    * [SPRD-24] - Explain how to handle exceptions in Perl5 and Lua binding
+                  documentation
+
+Release Notes - Sava C++/Lua/Perl/Python/Ruby Bindings for Spread -
+                Version 1.0.0
+** Bug
+    * [SPRD-22] - Perl library files don't install to proper location
+      on mixed 32-bit/64-bit Linux distributions that use /usr/lib64
+** New Feature
+    * [SPRD-23] - Add Lua binding
+**Improvement
+    * [No Issue] - For Perl, ScatterMessage::add(const void *, unsigned int)
+                   and Mailbox::add_message_part(const void *, unsigned int)
+                   are no longer add_str and add_messaage_part_str
+                   respectively.  You may now use add and add_message_part.
+
+Release Notes - Sava C++/Python/Ruby/Perl Bindings for Spread - Version 0.8.2
+
+** Improvement
+    * [No Issue] - Changed BaseMessage::sender() to return const string &
+                   instead of string
+** Bug
+    * [SPRD-20] - Mailbox::receive(ScatterMessage &, GroupList & groups)
+                  does not resize messages properly on BufferTooShort retry
+    * [SPRD-21] - Buffer::resize is not non-destructive for sizes greater
+                  than existing capacity
+
+Release Notes - Sava C++/Python/Ruby/Perl Bindings for Spread - Version 0.8.1
+
+** Improvement
+    * [No Issue] - Inlined ByteBuffer::write and ByteBuffer::read.
+    * [No Issue] - Added optimized ByteBuffer copy constructor and assignment
+                   operators.
+    * [No Issue] - Removed user-defined copy contructors and assignment
+                   operators for BaseMessage and Message and now rely on
+                   default copy constructors and assignment operators.
+
+Release Notes - Sava C++/Python/Ruby/Perl Bindings for Spread - Version 0.8.0
+
+** Improvement
+    * [SPRD-18] - Change Mailbox::receive, Mailbox::copy_groups,
+                  BaseMessage::get_membership_info, MembershipInfo getters,
+                  and other methods to use reference parameters instead of
+                  pointers
+** New Feature
+    * [SPRD-19] - Add SWIG-based Perl5 binding
+
+Release Notes - Sava C++/Python/Ruby Bindings for Spread - Version 0.7.5
+
+** Improvement
+    * [SPRD-15] - Rename Mailbox::mailbox() to Mailbox::descriptor()
+    * [SPRD-16] - Make libtspread-core/libtspread link dependency
+                  explicit in shared library
+    * [SPRD-17] - Change split_private_group to return std::pair<string,string>
+
+Release Notes - Sava C++/Python/Ruby Bindings for Spread - Version 0.7.4
+
+** New Feature
+    * [SPRD-13] - Add get_non_local_members() to MembershipInfo
+    * [SPRD-14] - Add support for Spread 3.17.3
+
+Release Notes - Sava C++/Python/Ruby Bindings for Spread - Version 0.7.3
+
+** Bug
+    * [SPRD-11] - MembershipInfo.is_regular_membership() returns wrong value
+
+Release Notes - Sava C++/Python/Ruby Bindings for Spread - Version 0.7.2
+
+** Task
+    * [SPRD-10] - Rename project "Sava C++/Python/Ruby Bindings for Spread"
+
+Release Notes - Sava Spread - Version 0.7.1
+
+** Bug
+    * [SPRD-8] - Set Message type/service/sender/endian_mismatch for
+                 zero-length messages (works properly for ScatterMessage)
+
+Release Notes - Sava Spread - Version 0.7.0
+
+** Bug
+    * [SPRD-4] - Initialize Mailbox::name() to daemon-assigned name
+                 when zero-length name specified
+** New Feature
+    * [SPRD-6] - Add SWIG-based Python binding
+    * [SPRD-7] - Add SWIG-based Ruby binding
+
+Release Notes - Sava Spread - Version 0.6.0
+
+** Task
+    * [SPRD-3] - Change <libssrcspread/foo> to <ssrc/foo>
+
+Release Notes - Sava Spread - Version 0.5.2
+
+** Improvement
+    * [SPRD-2] - Add default connection and private name values to
+                 Mailbox constructor
+
+

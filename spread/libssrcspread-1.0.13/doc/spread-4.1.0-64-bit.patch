@@ -1,0 +1,50 @@
+diff -r 52bd3bd6a97d daemon/scatter.h
+--- a/daemon/scatter.h	Sun Jun 21 21:32:42 2009 -0400
++++ b/daemon/scatter.h	Wed May 11 17:17:07 2011 -0400
+@@ -43,16 +43,16 @@
+ 
+ typedef struct dummy_scat_element{
+ 	char	*buf;
+-	int	len;
++	size_t	len;
+ } scat_element;
+ 
+ typedef struct dummy_scatter {
+-	int		num_elements;
++	size_t		num_elements;
+ 	scat_element	elements[ARCH_SCATTER_SIZE];
+ } sys_scatter;
+ 
+ typedef struct dummy_big_scatter {
+-	int		num_elements;
++	size_t		num_elements;
+ 	scat_element	elements[MAX_SCATTER_ELEMENTS];
+ } scatter;
+ 
+diff -r 52bd3bd6a97d include/sp.h
+--- a/include/sp.h	Sun Jun 21 21:32:42 2009 -0400
++++ b/include/sp.h	Wed May 11 17:17:07 2011 -0400
+@@ -37,6 +37,9 @@
+ #ifndef INC_SP
+ #define INC_SP
+ 
++/* For size_t. */
++#include <sys/types.h>
++
+ #ifdef __cplusplus
+ extern "C" {
+ #endif
+@@ -136,11 +139,11 @@
+ 
+ typedef	struct	dummy_scat_element{
+ 	char	*buf;
+-	int	len;
++	size_t	len;
+ } scat_element;
+ 
+ typedef	struct	dummy_scatter{
+-	int		num_elements;
++	size_t		num_elements;
+ 	scat_element	elements[MAX_CLIENT_SCATTER_ELEMENTS];
+ } scatter;
+ 
