@@ -61,6 +61,7 @@ def send_us(observation, reward, done, info):
         terminal = done,
         info = info,
     )
+#    print (data)
 
     if args.compress:
         compress_timer.tic()
@@ -94,16 +95,19 @@ def main():
             # action = 0
             # send_timer.tic()
 '''
+    env.reset()
     while True:
         raw_action = clientSocket.recv(4)
-        action = struct.unpack('I', raw_action)[0]
+        if raw_action == 'rest':
+            env.reset()
+        else:
+            action = struct.unpack('I', raw_action)[0]
             # send_timer.toc()
-
 #        compute_timer.tic()
-        observation, reward, done, info = env.step(action)
+            observation, reward, done, info = env.step(action)
 #        compute_timer.toc()
 
-        send_us(observation, reward, done, info)
+            send_us(observation, reward, done, info)
 #            frame_count.add(1)
 
 #            if done:

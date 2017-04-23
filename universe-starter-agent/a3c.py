@@ -9,6 +9,7 @@ import threading
 import distutils.version
 
 import socket
+import struct
 
 import socket_util
 import Queue
@@ -94,7 +95,7 @@ that would constantly interact with the environment and tell it what to do.  Thi
         self.visualise = visualise
         self.port = port
         self.num_actors = num_actors
-        print ('22222')
+#        print ('22222')
 
     def start_runner(self, sess, summary_writer):
         self.sess = sess
@@ -106,7 +107,7 @@ that would constantly interact with the environment and tell it what to do.  Thi
             self._run()
 
     def _run(self):
-        print ('44444')
+#        print ('44444')
         rollout_provider = env_runner(self.env, self.policy, self.num_local_steps, self.summary_writer, self.visualise, self.port, self.num_actors)
         while True:
             # the timeout variable exists because apparently, if one worker dies, the other workers
@@ -130,7 +131,7 @@ class SocketRecvThread(threading.Thread):
         self.buffer_size = 1400
         self.daemon = True
         self.sess = sess
-        print ('55555')
+#        print ('55555')
 
     def _frag_recv(self, mess_len):
         mess_remain = mess_len
@@ -146,7 +147,7 @@ class SocketRecvThread(threading.Thread):
             self._run()
 
     def _run(self):
-        print ('66666')
+#        print ('66666')
         last_state = self.env.reset()
         last_features = self.policy.get_initial_features()
         length = 0
@@ -157,14 +158,14 @@ class SocketRecvThread(threading.Thread):
             rollout = PartialRollout()
 
             for _ in range(self.num_local_steps):
-                print ('aaaaa')
+                #print ('aaaaa')
                 fetched = self.policy.act(last_state, *last_features)
                 action, value_, features = fetched[0], fetched[1], fetched[2:]
                 # argmax to convert from one-hot
                 #state, reward, terminal, info = env.step(action.argmax())
-                print ('88888') 
-                print (fetched)
-                print (action)
+                #print ('88888') 
+                #print (fetched)
+                #print (action.argmax())
                 self.connection_socket.send(struct.pack('I', action.argmax()))
 
                 if self.render:
@@ -175,27 +176,30 @@ class SocketRecvThread(threading.Thread):
                 if raw_message_len:
                     message_len = struct.unpack('I', raw_message_len)[0]
                     message = self._frag_recv(message_len)
-                    recovered_message = cPickle.loads(message)
+                    recovered_message = pickle.loads(message)
 
+#                print (recovered_message)
+ 
                 rollout.add(last_state, action, recovered_message['reward'], value_, recovered_message['terminal'], last_features)
                 length += 1
-                rewards += reward
+                rewards += recovered_message['reward']
 
-                last_state = recovered_message['state']
+                last_state = recovered_message['obs']
                 last_features = features
 
                 if recovered_message['info']:
                     summary = tf.Summary()
                     for k, v in recovered_message['info'].items():
                         summary.value.add(tag=k, simple_value=float(v))
-                    summary_writer.add_summary(summary, policy.global_step.eval())
-                    summary_writer.flush()
+                    self.summary_writer.add_summary(summary, self.policy.global_step.eval())
+                    self.summary_writer.flush()
 
-                timestep_limit = env.spec.tags.get('wrapper_config.TimeLimit.max_episode_steps')
+                timestep_limit = self.env.spec.tags.get('wrapper_config.TimeLimit.max_episode_steps')
                 if recovered_message['terminal'] or length >= timestep_limit:
                     terminal_end = True
-                    if length >= timestep_limit or not env.metadata.get('semantics.autoreset'):
+                    if length >= timestep_limit or not self.env.metadata.get('semantics.autoreset'):
                         last_state = self.env.reset()
+                        self.connection_socket.send('rest')
                     last_features = self.policy.get_initial_features()
                     print("Episode finished. Sum of rewards: %d. Length: %d" % (rewards, length))
                     length = 0
@@ -203,9 +207,13 @@ class SocketRecvThread(threading.Thread):
                     break
 
             if not terminal_end:
-                rollout.r = policy.value(last_state, *last_features)
+                rollout.r = self.policy.value(last_state, *last_features)
 
-            self.global_rollout = rollout
+            self.global_rollout[0] = rollout
+
+
+#last_rollout = PartialRollout()
+#current_rollout = last_rollout
 
 
 def env_runner(env, policy, num_local_steps, summary_writer, render, port, num_actors):
@@ -261,8 +269,10 @@ runner appends the policy to the queue.
         if not terminal_end:
             rollout.r = policy.value(last_state, *last_features)
 """
-    last_rollout = PartialRollout()
-    rollout = last_rollout
+    Rollout = PartialRollout()
+    Global = [Rollout]
+    last_rollout = Global[0]
+#    global current_rollout = last_rollout
 
     server_port = port
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -274,17 +284,18 @@ runner appends the policy to the queue.
     for i in range(0, num_actors):
         connection_socket, addr = server_socket.accept()
         client_addrs.append(addr)
-        recv_thread = SocketRecvThread(connection_socket, env, policy, num_local_steps, summary_writer, render, rollout, tf.get_default_session())
+        recv_thread = SocketRecvThread(connection_socket, env, policy, num_local_steps, summary_writer, render, Global, tf.get_default_session())
         recv_threads.append(recv_thread)
         recv_thread.start()
 
-    print ('77777')
+#    print ('77777')
     while True:
-        if rollout != last_rollout:
-            print ('bbbbb')
+#        print ('mmmmm')
+        if Global[0] != last_rollout:
+#            print ('bbbbb')
             # once we have enough experience, yield it, and have the ThreadRunner place it on a queue
-            yield rollout
-            last_rollout = rollout
+            yield Global[0]
+            last_rollout = Global[0]
  
 class A3C(object):
     def __init__(self, env, task, visualise, num_workers, verbose_lvl, port, num_actors):
@@ -327,7 +338,7 @@ should be computed.
         # on the one hand;  but on the other hand, we get less frequent parameter updates, which
         # slows down learning.  In this code, we found that making local steps be much
         # smaller than 20 makes the algorithm more difficult to tune and to get to work.
-        print ('11111')
+#        print ('11111')
         self.runner = RunnerThread(env, pi, 20, visualise, port, num_actors)
 
         grads = tf.gradients(self.loss, pi.var_list)
@@ -377,7 +388,7 @@ should be computed.
             socket_util.await_start_mcast(self.sock)
 
     def start(self, sess, summary_writer):
-        print ('33333')
+#        print ('33333')
         self.runner.start_runner(sess, summary_writer)
         self.summary_writer = summary_writer
         if sock_listen_thread:
@@ -387,7 +398,9 @@ should be computed.
         """
 self explanatory:  take a rollout from the queue of the thread runner.
 """
+#        print ('Try to pull from queue')
         rollout = self.runner.queue.get(True)
+#        print ('Succeed pulling')
         while not rollout.terminal:
             try:
                 rollout.extend(self.runner.queue.get_nowait())
