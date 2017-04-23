@@ -18,6 +18,6 @@ if __name__ == '__main__':
     send_msg.set_service(service)
 
     mbox.add_group(params.SPREAD_GROUP_NAME)
-    send_msg.write(params.START_MCAST_SIGNAL)
+    send_msg.write(params.START_SPREAD_SIGNAL)
     mbox.send(send_msg)
     print ( "start_mcast: Let the show begin!" )
