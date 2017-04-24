@@ -3,52 +3,58 @@ Spread utility class for MNIST Tensorflow distributed learning via peer-to-peer 
 
 Author: Yuan Jing Vincent Yan (vyan1@jhu.edu)
 '''
-#TODO import
 import spread
 import params
 import signal
-#import struct
-#import time
-#import threading
+import time
+import threading
 
-def timeout_handler(signum, frame):
-    raise Exception("Signal timeout!")
+timeout_flag = 0
 
-#TODO thread to Spread
-# class SockListenThread(threading.Thread):
-    # """
-    # Thread class that listens for socket message receiving. It terminates when stop() is called.
-    # """
-
-    # def __init__(self, sock, self_IP, inc_msg_q, num_peers, ret_val, verbose_lvl = 1):
-        # super(SockListenThread, self).__init__()
-        # self.sock = sock
-        # self.self_IP = self_IP
-        # self.inc_msg_q = inc_msg_q
-        # self.num_peers = num_peers
-        # self.ret_val = ret_val
-        # self.rcv_MSG_num = 0
-        # self.verbose_lvl = verbose_lvl
-        # self._stop = threading.Event()
-        # self.daemon = True # Make the daemon = True, so that I can kill this program with ctrl-c
-
-    # def run(self):
-        # while not self.stopped():
-            # if self.verbose_lvl >= 3:
-                # print "Entering recv cycle..."
-            # self.rcv_MSG_num = socket_recv_chucked_data(self.sock, self.self_IP, self.inc_msg_q, self.num_peers, self.rcv_MSG_num, self.verbose_lvl)
-        # # thread terminating
-        # time.sleep(1)
-        # if self.verbose_lvl >= 3:
-            # print "Entering final recv cycle..."
-        # self.rcv_MSG_num = socket_recv_chucked_data(self.sock, self.self_IP, self.inc_msg_q, self.num_peers, self.rcv_MSG_num, self.verbose_lvl)
-        # self.ret_val.put(self.rcv_MSG_num)
+def timeout_handler():
+    global timeout_flag
+    timeout_flag = 1
     
-    # def stop(self):
-        # self._stop.set()
+class SpreadListenThread(threading.Thread):
+    """
+    Thread class that listens for Spread message receiving. It terminates when stop() is called.
+    """
 
-    # def stopped(self):
-        # return self._stop.isSet()
+    def __init__(self, mbox, rcv_MSG, group_list, inc_msg_q, ret_val, verbose_lvl = 1):
+        super(SpreadListenThread, self).__init__()
+        self.mbox = mbox
+        self.rcv_MSG = rcv_MSG
+        self.group_list = group_list
+        self.inc_msg_q = inc_msg_q
+        self.ret_val = ret_val
+        self.rcv_msg_num = 0
+        self.verbose_lvl = verbose_lvl
+        self._stop = threading.Event()
+        self.daemon = True # Make the daemon = True, so that I can kill this program with ctrl-c
+
+    def run(self):
+        while not self.stopped():
+            if self.verbose_lvl >= 3:
+                print "Entering recv cycle..."
+            self.inc_msg = recv(self.mbox, self.rcv_MSG, self.group_list, True)
+            if self.inc_msg != None:
+                inc_msg_q.put(inc_msg)
+                self.rcv_msg_num += 1
+        # thread terminating
+        time.sleep(1)
+        if self.verbose_lvl >= 3:
+            print "Entering final recv cycle..."
+        self.inc_msg = recv(self.mbox, self.rcv_MSG, self.group_list, True)
+        if inc_msg != None:
+            self.inc_msg_q.put(inc_msg), True
+            self.rcv_msg_num += 1
+        self.ret_val.put(self.rcv_msg_num)
+    
+    def stop(self):
+        self._stop.set()
+
+    def stopped(self):
+        return self._stop.isSet()
 
         
 def set_up_start_spread():
@@ -132,18 +138,20 @@ def recv(mbox, rcv_MSG, group_list, timeout_enabled):
     @param group_list       Group list of the mailbox
     @param timeout_enabled  Is timeout enabled?
     @return The message received, or None if timed out
-    '''
+    '''  
+    global timeout_flag
     
+    timeout_flag = 0
+    timer = threading.Timer(params.SOCK_TIMEOUT_VAL, timeout_handler)
     rcv_MSG.clear()
-    try:
-        if timeout_enabled:
-             signal.setitimer(signal.ITIMER_REAL, params.SOCK_TIMEOUT_VAL)
-        while mbox.poll() == 0:
-            pass
-        signal.setitimer(signal.ITIMER_REAL, 0)
-    except Exception, exc: 
-        print exc
-        return None
+    
+    if timeout_enabled:
+         timer.start()
+    while mbox.poll() == 0:
+        if timeout_flag == 1:
+            print "Signal timeout!"
+            return None
+    timer.cancel()
 
     num_byte = mbox.receive(rcv_MSG, group_list)
     return rcv_MSG.read(num_byte)
