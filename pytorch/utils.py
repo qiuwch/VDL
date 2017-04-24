@@ -22,19 +22,19 @@ def imshow(inp, title=None):
         plt.title(title)
     plt.pause(0.001)  # pause a bit so that plots are updated
 
-def visualize_model(model, num_images=6):
+def visualize_model(model, dset_loaders, num_images=6):
     images_so_far = 0
     fig = plt.figure()
 
     for i, data in enumerate(dset_loaders['val']):
         inputs, labels = data
+        use_gpu = torch.cuda.is_available()
         if use_gpu:
             inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
         else:
             inputs, labels = Variable(inputs), Variable(labels)
 
         outputs = model(inputs)
-        _, preds = torch.max(outputs.data, 1)
         # print('Label')
         # print(labels)
         # print('Prediction')
@@ -54,6 +54,9 @@ def visualize_model(model, num_images=6):
 
             if images_so_far == num_images:
                 return
+
+def mean_abs_error(prediction, label): # numpy array with # of rows
+    pass
 
 def metric(prediction, label, threshold=5):
     # only consider the first three dimensions
