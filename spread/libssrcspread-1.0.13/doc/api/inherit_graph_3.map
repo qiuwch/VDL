@@ -1,0 +1,5 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$a00611.html" title="BaseMessage is an abstract class defining the operations shared in common by Message and ScatterMessa..." alt="" coords="5,56,117,83"/>
+<area shape="rect" id="node2" href="$a00639.html" title="Message is a reusable and resizable data buffer for sending and receiving messages. " alt="" coords="188,5,268,32"/>
+<area shape="rect" id="node3" href="$a00643.html" title="ScatterMessage is a reusable container of multiple in&#45;place data buffers. " alt="" coords="165,56,291,83"/>
+</map>

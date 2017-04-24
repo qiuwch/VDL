@@ -38,6 +38,7 @@ for i_episode in range(200):
 
 t1 = time.time()
 total_time = t1 - t0
+print total_time
 
 if args.log:
     util.mkdirp(os.path.dirname(args.log))
