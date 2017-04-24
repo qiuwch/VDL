@@ -36,7 +36,7 @@ class SpreadListenThread(threading.Thread):
         while not self.stopped():
             if self.verbose_lvl >= 3:
                 print "Entering recv cycle..."
-            inc_msg = recv(self.mbox, self.rcv_MSG, self.group_list, False) #TODODO make True
+            inc_msg = recv(self.mbox, self.rcv_MSG, self.group_list, True)
             if inc_msg != None:
                 self.inc_msg_q.put(inc_msg)
                 self.rcv_msg_num += 1
