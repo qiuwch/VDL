@@ -258,8 +258,15 @@ def visualize_model(model, num_images=6):
 
         outputs = model(inputs)
         _, preds = torch.max(outputs.data, 1)
-        print(labels)
-        print(preds)
+        # print('Label')
+        # print(labels)
+        # print('Prediction')
+        # print(outputs)
+        acc5 = metric(outputs, labels, 5)
+        acc10 = metric(outputs, labels, 10)
+        acc15 = metric(outputs, labels, 15)
+        print(outputs.size())
+        print(acc5, acc10, acc15)
 
         for j in range(inputs.size()[0]):
             images_so_far += 1
@@ -271,6 +278,18 @@ def visualize_model(model, num_images=6):
             if images_so_far == num_images:
                 return
 
+def metric(prediction, label, threshold=5):
+    # only consider the first three dimensions
+    diff = (prediction - label).cpu().data.numpy()
+    acc = (abs(diff) < threshold).sum(axis=1)
+    return acc
+
+
+def evaluate_model():
+    # The criteria for arm pose estimation?
+    # The first three degrees. The camera degrees are not important
+    pass
+
 ######################################################################
 # Finetuning the convnet
 # ----------------------
@@ -278,88 +297,101 @@ def visualize_model(model, num_images=6):
 # Load a pretrained model and reset final fully connected layer.
 #
 
-model_ft = models.resnet18(pretrained=True)
-num_ftrs = model_ft.fc.in_features
-# model_ft.fc = nn.Linear(num_ftrs, 2)
-model_ft.fc = nn.Linear(num_ftrs, 6)
+def main():
+    model_ft = models.resnet18(pretrained=True)
+    num_ftrs = model_ft.fc.in_features
+    # model_ft.fc = nn.Linear(num_ftrs, 2)
+    model_ft.fc = nn.Linear(num_ftrs, 6)
 
-if use_gpu:
-    model_ft = model_ft.cuda()
+    if use_gpu:
+        model_ft = model_ft.cuda()
 
-criterion = nn.MSELoss()
-# criterion = nn.CrossEntropyLoss()
+    criterion = nn.MSELoss()
+    # criterion = nn.CrossEntropyLoss()
 
-# Observe that all parameters are being optimized
-optimizer_ft = optim.SGD(model_ft.parameters(), lr=0.001, momentum=0.9)
+    # Observe that all parameters are being optimized
+    optimizer_ft = optim.SGD(model_ft.parameters(), lr=0.001, momentum=0.9)
 
-######################################################################
-# Train and evaluate
-# ^^^^^^^^^^^^^^^^^^
-#
-# It should take around 15-25 min on CPU. On GPU though, it takes less than a
-# minute.
-#
+    ######################################################################
+    # Train and evaluate
+    # ^^^^^^^^^^^^^^^^^^
+    #
+    # It should take around 15-25 min on CPU. On GPU though, it takes less than a
+    # minute.
+    #
 
-model_ft = train_model(model_ft, criterion, optimizer_ft, exp_lr_scheduler,
-                       num_epochs=25)
+    model_ft = train_model(model_ft, criterion, optimizer_ft, exp_lr_scheduler,
+                           num_epochs=25)
 
-######################################################################
-#
+    ######################################################################
+    #
 
-visualize_model(model_ft)
-
-
-######################################################################
-# ConvNet as fixed feature extractor
-# ----------------------------------
-#
-# Here, we need to freeze all the network except the final layer. We need
-# to set ``requires_grad == False`` to freeze the parameters so that the
-# gradients are not computed in ``backward()``.
-#
-# You can read more about this in the documentation
-# `here <http://pytorch.org/docs/notes/autograd.html#excluding-subgraphs-from-backward>`__.
-#
-
-model_conv = torchvision.models.resnet18(pretrained=True)
-for param in model_conv.parameters():
-    param.requires_grad = False
-
-# Parameters of newly constructed modules have requires_grad=True by default
-num_ftrs = model_conv.fc.in_features
-# model_conv.fc = nn.Linear(num_ftrs, 2)
-model_conv.fc = nn.Linear(num_ftrs, 6)
-
-if use_gpu:
-    model_conv = model_conv.cuda()
-
-# criterion = nn.CrossEntropyLoss()
-criterion = nn.MSELoss()
-
-# Observe that only parameters of final layer are being optimized as
-# opoosed to before.
-optimizer_conv = optim.SGD(model_conv.fc.parameters(), lr=0.001, momentum=0.9)
+    visualize_model(model_ft)
 
 
-######################################################################
-# Train and evaluate
-# ^^^^^^^^^^^^^^^^^^
-#
-# On CPU this will take about half the time compared to previous scenario.
-# This is expected as gradients don't need to be computed for most of the
-# network. However, forward does need to be computed.
-#
+    ######################################################################
+    # ConvNet as fixed feature extractor
+    # ----------------------------------
+    #
+    # Here, we need to freeze all the network except the final layer. We need
+    # to set ``requires_grad == False`` to freeze the parameters so that the
+    # gradients are not computed in ``backward()``.
+    #
+    # You can read more about this in the documentation
+    # `here <http://pytorch.org/docs/notes/autograd.html#excluding-subgraphs-from-backward>`__.
+    #
 
-model_conv = train_model(model_conv, criterion, optimizer_conv,
-                         exp_lr_scheduler, num_epochs=25)
+    model_conv = torchvision.models.resnet18(pretrained=True)
+    for param in model_conv.parameters():
+        param.requires_grad = False
 
-with open('arm.model', 'w') as f:
-    torch.save(model_conv, f)
+    # Parameters of newly constructed modules have requires_grad=True by default
+    num_ftrs = model_conv.fc.in_features
+    # model_conv.fc = nn.Linear(num_ftrs, 2)
+    model_conv.fc = nn.Linear(num_ftrs, 6)
 
-######################################################################
-#
+    if use_gpu:
+        model_conv = model_conv.cuda()
 
-visualize_model(model_conv)
+    # criterion = nn.CrossEntropyLoss()
+    criterion = nn.MSELoss()
+
+    # Observe that only parameters of final layer are being optimized as
+    # opoosed to before.
+    optimizer_conv = optim.SGD(model_conv.fc.parameters(), lr=0.001, momentum=0.9)
+
+
+    ######################################################################
+    # Train and evaluate
+    # ^^^^^^^^^^^^^^^^^^
+    #
+    # On CPU this will take about half the time compared to previous scenario.
+    # This is expected as gradients don't need to be computed for most of the
+    # network. However, forward does need to be computed.
+    #
+
+    model_conv = train_model(model_conv, criterion, optimizer_conv,
+                             exp_lr_scheduler, num_epochs=25)
+
+
+    ######################################################################
+    #
+    return model_conv
+
+
+
+if not os.path.isfile('arm.model'):
+    model_conv = main()
+    with open('arm.model', 'w') as f:
+        torch.save(model_conv, f)
+else:
+    with open('arm.model') as f:
+        model_conv = torch.load(f)
+    visualize_model(model_conv)
+
+    # Draw the training plot
+
+    # Evaluate this model
 
 plt.ioff()
 plt.show()
