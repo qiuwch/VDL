@@ -139,8 +139,7 @@ def train(sess, mnist, sock, self_IP, mcast_destination, num_peers, my_peer_ID, 
     # Send delta_W, delta_b to other peers
     deltas = delta_W, delta_b
     deltas_data = pickle.dumps(deltas, -1)
-    #TODODO re msg_sent = socket_util.socket_send_data_chucks(sock, deltas_data, mcast_destination, msg_sent)
-    msg_sent = socket_util.socket_send_data_chucks(sock, str(_).zfill(3) + deltas_data, mcast_destination, msg_sent)
+    msg_sent = socket_util.socket_send_data_chucks(sock, deltas_data, mcast_destination, msg_sent)
     
     # Handle each message in the socket queue
     num_new_msg = inc_msg_q.qsize()
@@ -149,7 +148,7 @@ def train(sess, mnist, sock, self_IP, mcast_destination, num_peers, my_peer_ID, 
     for _ in xrange(num_new_msg):
         # Process received delta_W, delta_b from other peers
         other_deltas_data = inc_msg_q.get(False)
-        other_deltas = pickle.loads(other_deltas_data[3:]) #TODODO rev
+        other_deltas = pickle.loads(other_deltas_data)
         other_delta_W, other_delta_b = other_deltas
     
         # Update own model based on delta_W, delta_b from other peers
@@ -165,7 +164,7 @@ def train(sess, mnist, sock, self_IP, mcast_destination, num_peers, my_peer_ID, 
   for _ in xrange(num_new_msg):
     # Process received delta_W, delta_b from other peers
     other_deltas_data = inc_msg_q.get(False)
-    other_deltas = pickle.loads(other_deltas_data[3:]) #TODODO rev
+    other_deltas = pickle.loads(other_deltas_data)
     other_delta_W, other_delta_b = other_deltas
 
     # Update own model based on delta_W, delta_b from other peers
@@ -223,9 +222,10 @@ def print_results(accuracy, train_starttime, test_starttime, test_endtime, num_p
   print("Batch size: ", batch_size)
   print("Number of rounds per machine: ", num_rounds)
   print("Total number of rounds: ", num_rounds * num_peers)
-  exp_msg_num = msg_sent * (num_peers - 1);
-  print("CARE: Msg rcv/expected and loss rate are broken when multithreading!")
-  print("Msg received = ", rcv_msg_num, "; Msg expected = ", exp_msg_num, "; lost rate = ", 1 - (rcv_msg_num * 1.0 / exp_msg_num) )
+  exp_msg_num = msg_sent * (num_peers - 1)
+  print("Msg sent = ", msg_sent)
+  loss_rate = 1 - (rcv_msg_num * 1.0 / exp_msg_num) if exp_msg_num > 0 else 0.0
+  print("Msg received = ", rcv_msg_num, "; Msg expected = ", exp_msg_num, "; lost rate = ",  loss_rate)
   print("Accuracy: ", accuracy)
   print("Train time: ", test_starttime - train_starttime, "; Test time: ", test_endtime - test_starttime)
   

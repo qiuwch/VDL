@@ -168,10 +168,10 @@ def train(sess, mnist, mbox, send_MSG, rcv_MSG, group_list, num_peers, my_peer_I
     MSG_RCV += num_new_msg
   
   # Final handling; only needed for async mode
-  time.sleep(2)
+  time.sleep(0.5)
   num_new_msg = inc_msg_q.qsize()
   if verbose_lvl >= 3:
-    print(_, " Queue handle; num msg = ", num_new_msg)
+    print("final Queue handle; num msg = ", num_new_msg)
   for _ in xrange(num_new_msg):
     # Process received delta_W, delta_b from other peers
     other_deltas_data = inc_msg_q.get(False)
@@ -182,6 +182,8 @@ def train(sess, mnist, mbox, send_MSG, rcv_MSG, group_list, num_peers, my_peer_I
     W.assign(W + other_delta_W).eval()
     b.assign(b + other_delta_b).eval()
 
+  if verbose_lvl >= 3:
+    print('Calling SpreadListenThread to terminate')
   spread_listen_thread.stop()
   rcv_msg_num = ret_val.get()
     
