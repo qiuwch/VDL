@@ -6,10 +6,13 @@ Author: Yuan Jing Vincent Yan (vyan1@jhu.edu)
 #TODO import
 import spread
 import params
+import signal
 #import struct
 #import time
 #import threading
 
+def timeout_handler(signum, frame):
+    raise Exception("Signal timeout!")
 
 #TODO thread to Spread
 # class SockListenThread(threading.Thread):
@@ -73,6 +76,9 @@ def set_up_spread_peer():
     @return Tuple of (Spread mailbox, Spread message object for sending, 
         Spread message object for receiving, group list of the mailbox)
     '''
+    
+    # Register the signal timeout handler
+    signal.signal(signal.SIGALRM, timeout_handler)
 
     group_list = spread.GroupList()
     group_list.add(params.SPREAD_GROUP_NAME)  
@@ -101,7 +107,7 @@ def await_start_spread(mbox, rcv_MSG, group_list):
     '''
     
     print('Waiting for start_spread signal...')
-    start_spread_msg = recv(mbox, rcv_MSG, group_list)
+    start_spread_msg = recv(mbox, rcv_MSG, group_list, False)
     assert (start_spread_msg == params.START_SPREAD_SIGNAL)
     print('Signal received.')
     
@@ -118,15 +124,26 @@ def send(mbox, send_MSG, msg_str):
     send_MSG.write(msg_str)
     mbox.send(send_MSG)
 
-def recv(mbox, rcv_MSG, group_list):
+def recv(mbox, rcv_MSG, group_list, timeout_enabled):
     '''
     Receive a multicast message via Spread
-    @param mbox        Spread mailbox
-    @param rcv_MSG     Spread message object for receiving
-    @param group_list  Group list of the mailbox
-    @return The message received
+    @param mbox             Spread mailbox
+    @param rcv_MSG          Spread message object for receiving
+    @param group_list       Group list of the mailbox
+    @param timeout_enabled  Is timeout enabled?
+    @return The message received, or None if timed out
     '''
     
     rcv_MSG.clear()
+    try:
+        if timeout_enabled:
+             signal.setitimer(signal.ITIMER_REAL, params.SOCK_TIMEOUT_VAL)
+        while mbox.poll() == 0:
+            pass
+        signal.setitimer(signal.ITIMER_REAL, 0)
+    except Exception, exc: 
+        print exc
+        return None
+
     num_byte = mbox.receive(rcv_MSG, group_list)
     return rcv_MSG.read(num_byte)

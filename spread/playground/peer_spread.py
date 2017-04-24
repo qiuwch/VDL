@@ -18,5 +18,8 @@ spread_util.send(mbox, send_MSG, data2 + str(my_peer_ID))
 
 
 for _ in xrange( (num_peers - 1) * 2):
-    rcv_message = spread_util.recv(mbox, rcv_MSG, group_list)
+    rcv_message = spread_util.recv(mbox, rcv_MSG, group_list, True)
     print rcv_message
+
+print 'Should timeout...'
+rcv_message = spread_util.recv(mbox, rcv_MSG, group_list, True)
