@@ -36,15 +36,15 @@ class SpreadListenThread(threading.Thread):
         while not self.stopped():
             if self.verbose_lvl >= 3:
                 print "Entering recv cycle..."
-            self.inc_msg = recv(self.mbox, self.rcv_MSG, self.group_list, True)
-            if self.inc_msg != None:
-                inc_msg_q.put(inc_msg)
+            inc_msg = recv(self.mbox, self.rcv_MSG, self.group_list, True)
+            if inc_msg != None:
+                self.inc_msg_q.put(inc_msg)
                 self.rcv_msg_num += 1
         # thread terminating
         time.sleep(1)
         if self.verbose_lvl >= 3:
             print "Entering final recv cycle..."
-        self.inc_msg = recv(self.mbox, self.rcv_MSG, self.group_list, True)
+        inc_msg = recv(self.mbox, self.rcv_MSG, self.group_list, True)
         if inc_msg != None:
             self.inc_msg_q.put(inc_msg), True
             self.rcv_msg_num += 1
@@ -128,6 +128,8 @@ def send(mbox, send_MSG, msg_str):
     
     send_MSG.clear()
     send_MSG.write(msg_str)
+    if params.VERBOSE_LVL >= 4:
+        print 'out ', len(msg_str), msg_str.encode("hex")
     mbox.send(send_MSG)
 
 def recv(mbox, rcv_MSG, group_list, timeout_enabled):
@@ -153,5 +155,41 @@ def recv(mbox, rcv_MSG, group_list, timeout_enabled):
             return None
     timer.cancel()
 
-    num_byte = mbox.receive(rcv_MSG, group_list)
-    return rcv_MSG.read(num_byte)
+    # Number of bytes received
+    num_bytes = mbox.receive(rcv_MSG, group_list)
+    inc_msg = reconstruct_received_message(rcv_MSG, num_bytes)
+    return inc_msg
+
+def reconstruct_received_message(rcv_MSG, num_bytes):
+    '''
+    Reconstruct a received message from a Spread message object for receiving. This is
+    necessary because sometimes the received message contains a '\x00' character, and
+    the Spread python wrapper will only read until '\x00'.
+    @param rcv_MSG    Spread message object for receiving
+    @param num_bytes  Number of bytes the message has
+    '''
+    
+    inc_msg = ''
+    if params.VERBOSE_LVL >= 4:
+        print 'inc ', num_bytes
+    bytes_read = 0
+    bytes_remaining = num_bytes
+    
+    while bytes_remaining > 0:
+        inc_msg_chuck = rcv_MSG.read(bytes_remaining)
+        if params.VERBOSE_LVL >= 4:
+            print inc_msg_chuck.encode("hex")
+            print 'len = ', len(inc_msg_chuck)
+        inc_msg += inc_msg_chuck + '00'.decode("hex")
+        
+        bytes_read += len(inc_msg_chuck) + 1
+        bytes_remaining -= len(inc_msg_chuck) + 1
+        rcv_MSG.seek(bytes_read)
+        if params.VERBOSE_LVL >= 4:
+            print 'bytes_read', bytes_read
+            print 'bytes_remaining = ', bytes_remaining
+    if params.VERBOSE_LVL >= 4:
+        print "Finally ", inc_msg.encode("hex")
+    
+    return inc_msg[:-1]
+    
