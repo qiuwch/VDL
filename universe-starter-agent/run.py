@@ -76,7 +76,7 @@ def run(args):
                 pass
                 print('Got Initial value from worker 0')
                 # Receive remote var data and use it as a start signal
-                assign_op = [v.assign(data) for (v, data) in zip(var_list, remote_var_data)]
+                assign_op = [v.assign(data) for (v, data) in zip(var_list, remote_var_data)] #TODO move outside loop
                 sess.run(assign_op)
 
         trainer.start(sess, summary_writer)
