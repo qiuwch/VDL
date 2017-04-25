@@ -115,6 +115,7 @@ def socket_send_data_chucks(sock, data, mcast_destination, msg_sent):
     msg_sent += 1
     
     for i in xrange(0, sys.getsizeof(data), params.MAX_PACKET_SIZE):
+	time.sleep(0.01)
         data_chuck = data[i : i + params.MAX_PACKET_SIZE]
         sock.sendto(data_chuck, mcast_destination)
         msg_sent += 1
@@ -178,6 +179,7 @@ def socket_recv_chucked_data(sock, self_IP, queue, num_peers, rcv_msg_num, verbo
                             print('Full packet received; adding to queue')
     except socket.timeout:
         if verbose_lvl >= 1:
-            print('socket_recv_chucked_data timed out')
+            # print('socket_recv_chucked_data timed out')
+            pass
     
     return rcv_msg_num
