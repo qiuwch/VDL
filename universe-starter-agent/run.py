@@ -91,7 +91,7 @@ Setting up Tensorflow for data parallel work
                         help="Visualise the gym environment by running env.render() between each timestep")
 
     parser.add_argument('--port', type=int, default=10000)
-    parser.add_argument('--num_actors', type=int, default=1)
+    parser.add_argument('--num_actors', type=int, default=0)
 
     args = parser.parse_args()
     run(args)

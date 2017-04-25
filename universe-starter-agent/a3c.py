@@ -212,90 +212,89 @@ class SocketRecvThread(threading.Thread):
             self.global_rollout[0] = rollout
 
 
-#last_rollout = PartialRollout()
-#current_rollout = last_rollout
-
 
 def env_runner(env, policy, num_local_steps, summary_writer, render, port, num_actors):
     """
 The logic of the thread runner.  In brief, it constantly keeps on running
 the policy, and as long as the rollout exceeds a certain length, the thread
 runner appends the policy to the queue.
-    last_state = env.reset()
-    last_features = policy.get_initial_features()
-    length = 0
-    rewards = 0
-
-    while True:
-        terminal_end = False
-        rollout = PartialRollout()
-
-        for _ in range(num_local_steps):
-            # TODO: @qiuwch, Replace policy.act to action from learner
-            fetched = policy.act(last_state, *last_features)
-            action, value_, features = fetched[0], fetched[1], fetched[2:]
-            # argmax to convert from one-hot
-            state, reward, terminal, info = env.step(action.argmax())
-            if render:
-                env.render()
-
-            # collect the experience
-            # TODO: @qiuwch, Replace rollout.add to a function sending message back to the learner
-            rollout.add(last_state, action, reward, value_, terminal, last_features)
-            length += 1
-            rewards += reward
-
-            last_state = state
-            last_features = features
-
-            if info:
-                summary = tf.Summary()
-                for k, v in info.items():
-                    summary.value.add(tag=k, simple_value=float(v))
-                summary_writer.add_summary(summary, policy.global_step.eval())
-                summary_writer.flush()
-
-            timestep_limit = env.spec.tags.get('wrapper_config.TimeLimit.max_episode_steps')
-            if terminal or length >= timestep_limit:
-                terminal_end = True
-                if length >= timestep_limit or not env.metadata.get('semantics.autoreset'):
-                    last_state = env.reset()
-                last_features = policy.get_initial_features()
-                print("Episode finished. Sum of rewards: %d. Length: %d" % (rewards, length))
-                length = 0
-                rewards = 0
-                break
-
-        if not terminal_end:
-            rollout.r = policy.value(last_state, *last_features)
 """
-    Rollout = PartialRollout()
-    Global = [Rollout]
-    last_rollout = Global[0]
-#    global current_rollout = last_rollout
+    if num_actors == 0:
+        last_state = env.reset()
+        last_features = policy.get_initial_features()
+        length = 0
+        rewards = 0
 
-    server_port = port
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind(('', server_port))
-    server_socket.listen(5)
+        while True:
+            terminal_end = False
+            rollout = PartialRollout()
 
-    client_addrs = []
-    recv_threads = []
-    for i in range(0, num_actors):
-        connection_socket, addr = server_socket.accept()
-        client_addrs.append(addr)
-        recv_thread = SocketRecvThread(connection_socket, env, policy, num_local_steps, summary_writer, render, Global, tf.get_default_session())
-        recv_threads.append(recv_thread)
-        recv_thread.start()
+            for _ in range(num_local_steps):
+                fetched = policy.act(last_state, *last_features)
+                action, value_, features = fetched[0], fetched[1], fetched[2:]
+                # argmax to convert from one-hot
+                state, reward, terminal, info = env.step(action.argmax())
+                if render:
+                    env.render()
+
+                # collect the experience
+                rollout.add(last_state, action, reward, value_, terminal, last_features)
+                length += 1
+                rewards += reward
+
+                last_state = state
+                last_features = features
+
+                if info:
+                    summary = tf.Summary()
+                    for k, v in info.items():
+                        summary.value.add(tag=k, simple_value=float(v))
+                    summary_writer.add_summary(summary, policy.global_step.eval())
+                    summary_writer.flush()
+
+                timestep_limit = env.spec.tags.get('wrapper_config.TimeLimit.max_episode_steps')
+                if terminal or length >= timestep_limit:
+                    terminal_end = True
+                    if length >= timestep_limit or not env.metadata.get('semantics.autoreset'):
+                        last_state = env.reset()
+                    last_features = policy.get_initial_features()
+                    print("Episode finished. Sum of rewards: %d. Length: %d" % (rewards, length))
+                    length = 0
+                    rewards = 0
+                    break
+
+            if not terminal_end:
+                rollout.r = policy.value(last_state, *last_features)
+
+            yield rollout
+
+    else:
+        Rollout = PartialRollout()
+        Global = [Rollout]
+        last_rollout = Global[0]
+
+        server_port = port
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket.bind(('', server_port))
+        server_socket.listen(5)
+
+        client_addrs = []
+        recv_threads = []
+        for i in range(0, num_actors):
+            connection_socket, addr = server_socket.accept()
+            client_addrs.append(addr)
+            recv_thread = SocketRecvThread(connection_socket, env, policy, num_local_steps, summary_writer, render, Global, tf.get_default_session())
+            recv_threads.append(recv_thread)
+            recv_thread.start()
 
 #    print ('77777')
-    while True:
+        while True:
 #        print ('mmmmm')
-        if Global[0] != last_rollout:
+            if Global[0] != last_rollout:
 #            print ('bbbbb')
             # once we have enough experience, yield it, and have the ThreadRunner place it on a queue
-            yield Global[0]
-            last_rollout = Global[0]
+                yield Global[0]
+                last_rollout = Global[0]
  
 class A3C(object):
     def __init__(self, env, task, visualise, num_workers, verbose_lvl, port, num_actors):
@@ -399,7 +398,7 @@ should be computed.
 self explanatory:  take a rollout from the queue of the thread runner.
 """
 #        print ('Try to pull from queue')
-        rollout = self.runner.queue.get(True)
+        rollout = self.runner.queue.get(timeout=600.0)
 #        print ('Succeed pulling')
         while not rollout.terminal:
             try:
