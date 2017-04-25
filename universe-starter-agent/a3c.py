@@ -14,7 +14,7 @@ import cPickle as pickle
 use_tf12_api = distutils.version.LooseVersion(tf.VERSION) >= distutils.version.LooseVersion('0.12.0')
 sock_listen_thread = None
 
-import pdb
+import pdb, sys
 
 
 def discount(x, gamma):
@@ -168,6 +168,8 @@ runner appends the policy to the queue.
         # once we have enough experience, yield it, and have the ThreadRunner place it on a queue
         yield rollout
 
+var0 = None  # TODO: Change these two to local variables
+var1 = None
 class A3C(object):
     def __init__(self, env, task, visualise, num_workers, verbose_lvl):
         """
@@ -307,26 +309,31 @@ server.
 
         # Get current trainable variables
         # This is trainable variables
-        var0 = sess.run(self.local_network.var_list) # A list of numpy array
         fetched = sess.run(fetches, feed_dict=feed_dict)
-        var1 = sess.run(self.local_network.var_list) # After training
 
-        var_diff = [a - b for (a,b) in zip(var1, var0)]
-        var_diff_data = pickle.dumps(var_diff, -1)
 
         if self.num_workers > 1:
-            if self.local_steps % 5 == 0:
-                self.msg_sent = socket_util.socket_send_data_chucks(self.sock, var_diff_data, self.mcast_destination, self.msg_sent)
+            sys.stdout.write('\r' + str(self.local_steps))
+            if self.local_steps % 100 == 0:
+                global var0
+                global var1
+                var1 = sess.run(self.local_network.var_list) # After training
+                if var0 != None:
+                    var_diff = [a - b for (a,b) in zip(var1, var0)]
+                    var_diff_data = pickle.dumps(var_diff, -1)
+                    print('Sync weights')
+                    self.msg_sent = socket_util.socket_send_data_chucks(self.sock, var_diff_data, self.mcast_destination, self.msg_sent)
+                var0 = sess.run(self.local_network.var_list) # A list of numpy array
 
-                # Handle each message in the socket queue
-                while not self.inc_msg_q.empty():
-                    # Process received grads_and_vars from other peers
-                    remote_var_diff_data = inc_msg_q.get(False)
-                    remote_var_diff = pickle.loads(remote_var_diff_data)
+	    # Handle each message in the socket queue
+	    while not self.inc_msg_q.empty():
+		# Process received grads_and_vars from other peers
+		remote_var_diff_data = inc_msg_q.get(False)
+		remote_var_diff = pickle.loads(remote_var_diff_data)
 
-                    add_op = [a+b for (a,b) in zip(self.local_network.var_list, remote_var_diff)]
-                    sess.run(add_op)
-                    print('Apply remote gradients')
+		add_op = [a+b for (a,b) in zip(self.local_network.var_list, remote_var_diff)]
+		sess.run(add_op)
+		print('Apply remote gradients')
 
         if should_compute_summary:
             self.summary_writer.add_summary(tf.Summary.FromString(fetched[0]))
