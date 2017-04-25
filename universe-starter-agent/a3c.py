@@ -327,13 +327,13 @@ server.
 
 	    # Handle each message in the socket queue
 	    while not self.inc_msg_q.empty():
+		print('Apply remote gradients')
 		# Process received grads_and_vars from other peers
-		remote_var_diff_data = inc_msg_q.get(False)
+		remote_var_diff_data = self.inc_msg_q.get(False)
 		remote_var_diff = pickle.loads(remote_var_diff_data)
 
 		add_op = [a+b for (a,b) in zip(self.local_network.var_list, remote_var_diff)]
 		sess.run(add_op)
-		print('Apply remote gradients')
 
         if should_compute_summary:
             self.summary_writer.add_summary(tf.Summary.FromString(fetched[0]))
