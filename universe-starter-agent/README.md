@@ -20,4 +20,18 @@ python run.py --env-id flashgames.NeonRace-v0 --logdir train-log/neonrace-baseli
 
 
 ## Learner - multiple actors 
+Run run.py without defining value of num_actors to run one environment locally. `python run.py --env-id flashgames.NeonRace-v0`
+
+To run two actors, do `python run.py --env-id flashgames.NeonRace-v0 --num_actors 2 --port (...)` to run learner. Port number is 10000 as default. And do `python actor.py --server_ip (...) --port (...)`on two different machine to run actors. Server ip is ccvl2 as default.
+
+## Multiple learners
+```shell
+python run.py --num-workers 3 --log-dir train-log/pong-multi-learners
+```
+
+In any machine
+```shell
+python start_mcast.py
+```
+
 

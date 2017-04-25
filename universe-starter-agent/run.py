@@ -11,6 +11,7 @@ from a3c import A3C
 from envs import create_env
 import distutils.version
 use_tf12_api = distutils.version.LooseVersion(tf.VERSION) >= distutils.version.LooseVersion('0.12.0')
+from pprint import pprint
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -62,6 +63,21 @@ def run(args):
     with tf.Session() as sess:
         init = tf.global_variables_initializer()
         sess.run(init)
+
+        if args.num_workers > 1:
+            if args.worker_id == 0:
+	        print('Initial values of weights')
+                var_init = sess.run(var_list) # After training
+                pprint(var_init) 
+                var_init_data = pickle.dumps(var_init) 
+                msg_sent = socket_util.socket_send_data_chucks(self.sock, var_diff_data, self.mcast_destination, self.msg_sent)
+            else:
+                print('Wait initial weights')
+                pass
+                print('Got Initial value from worker 0')
+                # Receive remote var data and use it as a start signal
+                assign_op = [v.assign(data) for (v, data) in zip(var_list, remote_var_data)] #TODO move outside loop
+                sess.run(assign_op)
 
         trainer.start(sess, summary_writer)
         while True:
