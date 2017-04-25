@@ -24,7 +24,7 @@ python run.py --env-id flashgames.NeonRace-v0 --logdir train-log/neonrace-baseli
 
 ## Multiple learners
 ```shell
-python run.py --num-workers 3 --logdir train-log/pong-multi-learners
+python run.py --num-workers 3 --log-dir train-log/pong-multi-learners
 ```
 
 In any machine
