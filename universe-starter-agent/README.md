@@ -21,3 +21,15 @@ python run.py --env-id flashgames.NeonRace-v0 --logdir train-log/neonrace-baseli
 
 ## Learner - multiple actors 
 
+
+## Multiple learners
+```shell
+python run.py --num-workers 3 --logdir train-log/pong-multi-learners
+```
+
+In any machine
+```shell
+python start_mcast.py
+```
+
+
