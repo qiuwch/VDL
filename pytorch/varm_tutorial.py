@@ -16,43 +16,47 @@ from varm_data import VArmDataset
 
 plt.ion()   # interactive mode
 
-data_transforms = {
-    'train': transforms.Compose([
-        # transforms.RandomSizedCrop(224),
-        transforms.Scale(256),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ]),
-    'val': transforms.Compose([
-        transforms.Scale(256),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ]),
-}
+def get_dataloader():
+    data_transforms = {
+        'train': transforms.Compose([
+            # transforms.RandomSizedCrop(224),
+            transforms.Scale(256),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ]),
+        'val': transforms.Compose([
+            transforms.Scale(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ]),
+    }
 
 
-dsets = dict(
-    train = VArmDataset('data/train', transform=data_transforms['train']),
-    val = VArmDataset('data/val', transform=data_transforms['val']),
-    # Do not transform test data
-    test = VArmDataset('data/test', transform=data_transforms['val']),
-)
+    dsets = dict(
+        train = VArmDataset('data/train', transform=data_transforms['train']),
+        val = VArmDataset('data/val', transform=data_transforms['val']),
+        # Do not transform test data
+        test = VArmDataset('data/test', transform=data_transforms['val']),
+    )
 
-dset_loaders = {x: torch.utils.data.DataLoader(dsets[x], batch_size=4,
-                                               shuffle=True, num_workers=4)
-                for x in ['train']}
-# No random shuffle for val and test set
-dset_loaders1 = {x: torch.utils.data.DataLoader(dsets[x], batch_size=4,
-                                               shuffle=False, num_workers=4)
-                for x in ['val', 'test']}
-dset_loaders.update(dset_loaders1)
+    dset_loaders = {x: torch.utils.data.DataLoader(dsets[x], batch_size=4,
+                                                   shuffle=True, num_workers=4)
+                    for x in ['train']}
+    # No random shuffle for val and test set
+    dset_loaders1 = {x: torch.utils.data.DataLoader(dsets[x], batch_size=4,
+                                                   shuffle=False, num_workers=4)
+                    for x in ['val', 'test']}
+    dset_loaders.update(dset_loaders1)
 
-dset_sizes = {x: len(dsets[x]) for x in ['train', 'val', 'test']}
-# dset_classes = dsets['train'].classes
+    dset_sizes = {x: len(dsets[x]) for x in ['train', 'val', 'test']}
+    # dset_classes = dsets['train'].classes
 
-use_gpu = torch.cuda.is_available()
+    use_gpu = torch.cuda.is_available()
+    return dset_loaders
+
+dset_loaders = get_dataloader()
 
 def visualize_data(dbtype):
     # Get a batch of training data
@@ -219,7 +223,7 @@ def visualize_prediction_html(model, dset_loaders, dbtype):
         return np_str
     # write the prediction to an html file
     f = open('%s.html' % dbtype, 'w')
-    filenames = dsets[dbtype].imgs # image filenames
+    filenames = dset_loaders[dbtype].dataset.imgs # image filenames
     cursor = 0
     row_template = '''
     <tr>
@@ -255,9 +259,11 @@ def visualize_prediction_html(model, dset_loaders, dbtype):
     f.close()
 
 def get_prediction(model, dset_loaders, dbtype):
-    labels = []; outputs = []
+    labels = []; outputs = []; images = []
     images_so_far = 0
-    for i, data in enumerate(dset_loaders[dbtype]):
+    cursor = 0
+    dset_loader = dset_loaders[dbtype]
+    for i, data in enumerate(dset_loader):
         inputs, _labels = data
         use_gpu = torch.cuda.is_available()
         inputs, _labels = Variable(inputs.cuda()), Variable(_labels.cuda())
@@ -267,8 +273,10 @@ def get_prediction(model, dset_loaders, dbtype):
         for j in range(inputs.size()[0]):
             labels.append(_labels[j].cpu().data.numpy())
             outputs.append(_outputs[j].cpu().data.numpy())
+            images.append(dset_loader.dataset.imgs[cursor])
+            cursor += 1
 
-    return outputs, labels
+    return outputs, labels, images
 
 
 def acc_summary(outputs, labels):
@@ -285,6 +293,10 @@ def acc_summary(outputs, labels):
         mean_abs_val = np.mean(abs(col1 - col2))
         print('For joint %s, num %d, MAE %f' % (joints[col_id], len(col1), mean_abs_val))
 
+        for threshold in [5, 10, 15]:
+            pass
+
+
 
 if __name__ == '__main__':
     # visualize_data('train')
@@ -299,11 +311,11 @@ if __name__ == '__main__':
     # visualize_model(model_conv, dset_loaders)
     # visualize_prediction_html(model_conv, dset_loaders, 'val')
     # visualize_prediction_html(model_conv, dset_loaders, 'test')
-    [outputs, labels] = get_prediction(model_conv, dset_loaders, 'val')
+    [outputs, labels, images] = get_prediction(model_conv, dset_loaders, 'val')
     print('Acc summary for val')
     acc_summary(outputs, labels)
 
-    [outputs, labels] = get_prediction(model_conv, dset_loaders, 'test')
+    [outputs, labels, images] = get_prediction(model_conv, dset_loaders, 'test')
     print('Acc summary for test')
     acc_summary(outputs, labels)
 
