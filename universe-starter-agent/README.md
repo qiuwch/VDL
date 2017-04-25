@@ -26,12 +26,15 @@ To run two actors, do `python run.py --env-id flashgames.NeonRace-v0 --num_actor
 
 ## Multiple learners
 ```shell
-python run.py --num-workers 3 --log-dir train-log/pong-multi-learners
+python run.py --num-workers 3 --log-dir train-log/pong-multi-learners -id 0
+python run.py --num-workers 3 --log-dir train-log/pong-multi-learners -id 1
+python run.py --num-workers 3 --log-dir train-log/pong-multi-learners -id 2
 ```
 
 In any machine
 ```shell
 python start_mcast.py
+python start_mcast.py   // run a second time after a while; wait for the "Waiting for start_mcast signal..." prompt
 ```
 
 
