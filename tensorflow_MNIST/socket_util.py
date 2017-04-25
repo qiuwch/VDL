@@ -144,7 +144,7 @@ def socket_recv_chucked_data(sock, self_IP, queue, num_peers, rcv_msg_num, verbo
             msg, (addr, port) = sock.recvfrom(params.MAX_PACKET_SIZE)
             rcv_msg_num += 1
             if addr == self_IP:
-                #TODO re rcv_msg_num -= 1
+                rcv_msg_num -= 1
                 continue
             elif addr not in addr_dict  or  addr_dict[addr][0] == 0:
                 # if no "Arnold":
@@ -171,7 +171,6 @@ def socket_recv_chucked_data(sock, self_IP, queue, num_peers, rcv_msg_num, verbo
                         sys.stdout.write('.')
                     if addr_dict[addr][0] == 0:
                         queue.put(addr_dict[addr][1])
-                        print(addr_dict[addr][1][:3]) #TODODO rm
                         queue_cnt += 1
                         addr_dict[addr] = [0, '']
                         if verbose_lvl >= 2:

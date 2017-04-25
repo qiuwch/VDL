@@ -1,0 +1,4 @@
+<map id="BaseMessage" name="BaseMessage">
+<area shape="rect" id="node2" href="$a00639.html" title="Message is a reusable and resizable data buffer for sending and receiving messages. " alt="" coords="5,80,85,107"/>
+<area shape="rect" id="node3" href="$a00643.html" title="ScatterMessage is a reusable container of multiple in&#45;place data buffers. " alt="" coords="109,80,235,107"/>
+</map>
