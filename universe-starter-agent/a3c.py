@@ -15,6 +15,7 @@ use_tf12_api = distutils.version.LooseVersion(tf.VERSION) >= distutils.version.L
 sock_listen_thread = None
 
 import pdb, sys
+from pprint import pprint
 
 
 def discount(x, gamma):
@@ -235,7 +236,7 @@ runner appends the policy to the queue.
 var0 = None  # TODO: Change these two to local variables
 var1 = None
 class A3C(object):
-    def __init__(self, env, task, visualise, num_workers, verbose_lvl):
+    def __init__(self, env, task, visualise, num_workers, worker_id, verbose_lvl):
         """
 An implementation of the A3C algorithm that is reasonably well-tuned for the VNC environments.
 Below, we will have a modest amount of complexity due to the way TensorFlow handles data parallelism.
@@ -317,18 +318,44 @@ should be computed.
         self.ret_val = Queue.Queue()
         self.msg_sent = 0
         self.num_workers = num_workers
+        self.worker_id = worker_id
 
         if self.num_workers > 1: # Only wait when we are using mutilple workers
             self.sock, self_IP, self.mcast_destination = socket_util.set_up_UDP_mcast_peer()
             sock_listen_thread = socket_util.SockListenThread(self.sock, self_IP, self.inc_msg_q, num_workers, self.ret_val, verbose_lvl)
-            #TODO while waiting, other stuff are still happening
-            socket_util.await_start_mcast(self.sock)
+            
 
+    def start_listen_thread(self):
+        #TODO while waiting, other stuff are still happening
+        socket_util.await_start_mcast(self.sock)
+        if self.num_workers > 1:
+            if sock_listen_thread:
+                sock_listen_thread.start()
+                
+    def sync_initial_weights(self, sess, var_list):
+        if self.num_workers > 1:
+            if self.worker_id == 0:
+                print('Initial values of weights')
+                var_init = sess.run(var_list) # After training
+                pprint(var_init) 
+                var_init_data = pickle.dumps(var_init) 
+                self.msg_sent = socket_util.socket_send_data_chucks(self.sock, var_init_data, self.mcast_destination, self.msg_sent)
+            else:
+                print('Wait initial weights')
+                while self.inc_msg_q.empty():
+                    pass
+                print('Got Initial value from worker 0')
+                # Receive remote var data and use it as a start signal
+                remote_var_data = self.inc_msg_q.get(False)
+                remote_var = pickle.loads(remote_var_data)
+                assign_op = [v.assign(data) for (v, data) in zip(var_list, remote_var)]
+                sess.run(assign_op)
+                sleep(0.5)
+            print('Sync initial weights completed')
+    
     def start(self, sess, summary_writer):
         self.runner.start_runner(sess, summary_writer)
         self.summary_writer = summary_writer
-        if sock_listen_thread:
-            sock_listen_thread.start()
 
     def pull_batch_from_queue(self):
         """
@@ -383,7 +410,7 @@ server.
                 global var1
                 var1 = sess.run(self.local_network.var_list) # After training
                 if var0 != None:
-                    var_diff = [a - b for (a,b) in zip(var1, var0)] #TODO move outside loop
+                    var_diff = [a - b for (a,b) in zip(var1, var0)]
                     var_diff_data = pickle.dumps(var_diff, -1)
                     print('Sync weights')
                     self.msg_sent = socket_util.socket_send_data_chucks(self.sock, var_diff_data, self.mcast_destination, self.msg_sent)
@@ -396,7 +423,7 @@ server.
                 remote_var_diff_data = self.inc_msg_q.get(False)
                 remote_var_diff = pickle.loads(remote_var_diff_data)
 
-                add_op = [a+b for (a,b) in zip(self.local_network.var_list, remote_var_diff)] #TODO move outside loop
+                add_op = [a+b for (a,b) in zip(self.local_network.var_list, remote_var_diff)]
                 sess.run(add_op)
 
         if should_compute_summary:

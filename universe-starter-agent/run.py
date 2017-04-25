@@ -11,7 +11,6 @@ from a3c import A3C
 from envs import create_env
 import distutils.version
 use_tf12_api = distutils.version.LooseVersion(tf.VERSION) >= distutils.version.LooseVersion('0.12.0')
-from pprint import pprint
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -25,7 +24,7 @@ class FastSaver(tf.train.Saver):
 
 def run(args):
     env = create_env(args.env_id, client_id=str(args.task), remotes=args.remotes)
-    trainer = A3C(env, args.task, args.visualise, args.num_workers, args.verbose_lvl)
+    trainer = A3C(env, args.task, args.visualise, args.num_workers, args.worker_id, args.verbose_lvl)
 
     # Variable names that start with "local" are not saved in checkpoints.
     if use_tf12_api:
@@ -64,21 +63,8 @@ def run(args):
         init = tf.global_variables_initializer()
         sess.run(init)
 
-        if args.num_workers > 1:
-            if args.worker_id == 0:
-	        print('Initial values of weights')
-                var_init = sess.run(var_list) # After training
-                pprint(var_init) 
-                var_init_data = pickle.dumps(var_init) 
-                msg_sent = socket_util.socket_send_data_chucks(self.sock, var_diff_data, self.mcast_destination, self.msg_sent)
-            else:
-                print('Wait initial weights')
-                pass
-                print('Got Initial value from worker 0')
-                # Receive remote var data and use it as a start signal
-                assign_op = [v.assign(data) for (v, data) in zip(var_list, remote_var_data)] #TODO move outside loop
-                sess.run(assign_op)
-
+        trainer.start_listen_thread()
+        trainer.sync_initial_weights(sess, var_list)
         trainer.start(sess, summary_writer)
         while True:
             trainer.process(sess)
@@ -92,6 +78,7 @@ Setting up Tensorflow for data parallel work
     parser.add_argument('-v', '--verbose', action='count', dest='verbosity', default=0, help='Set verbosity.')
     parser.add_argument('--task', default=0, type=int, help='Task index')
     parser.add_argument('--num-workers', default=1, type=int, help='Number of workers')
+    parser.add_argument('-id', '--worker-id', type=int, help='My worker ID')
     parser.add_argument('-vb', '--verbose-lvl', default=1, type=int, help='Level of verboseness')
     parser.add_argument('--log-dir', default="/tmp/pong", help='Log directory path')
     parser.add_argument('--env-id', default="PongDeterministic-v3", help='Environment id')
