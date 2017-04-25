@@ -1,38 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Transfer Learning tutorial
-==========================
-**Author**: `Sasank Chilamkurthy <https://chsasank.github.io>`_
-
-In this tutorial, you will learn how to train your network using
-transfer learning. You can read more about the transfer learning at `cs231n
-notes <http://cs231n.github.io/transfer-learning/>`__
-
-Quoting this notes,
-
-    In practice, very few people train an entire Convolutional Network
-    from scratch (with random initialization), because it is relatively
-    rare to have a dataset of sufficient size. Instead, it is common to
-    pretrain a ConvNet on a very large dataset (e.g. ImageNet, which
-    contains 1.2 million images with 1000 categories), and then use the
-    ConvNet either as an initialization or a fixed feature extractor for
-    the task of interest.
-
-These two major transfer learning scenarios looks as follows:
-
--  **Finetuning the convnet**: Instead of random initializaion, we
-   initialize the network with a pretrained network, like the one that is
-   trained on imagenet 1000 dataset. Rest of the training looks as
-   usual.
--  **ConvNet as fixed feature extractor**: Here, we will freeze the weights
-   for all of the network except that of the final fully connected
-   layer. This last fully connected layer is replaced with a new one
-   with random weights and only this layer is trained.
-
-"""
-# License: BSD
-# Author: Sasank Chilamkurthy
-
 from __future__ import print_function, division
 
 import torch
@@ -50,44 +16,54 @@ from varm_data import VArmDataset
 
 plt.ion()   # interactive mode
 
-data_transforms = {
-    'train': transforms.Compose([
-        # transforms.RandomSizedCrop(224),
-        transforms.Scale(256),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ]),
-    'val': transforms.Compose([
-        transforms.Scale(256),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ]),
-}
+def get_dataloader():
+    data_transforms = {
+        'train': transforms.Compose([
+            # transforms.RandomSizedCrop(224),
+            transforms.Scale(256),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ]),
+        'val': transforms.Compose([
+            transforms.Scale(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ]),
+    }
 
 
-dsets = dict(
-    train = VArmDataset('data/train', transform=data_transforms['train']),
-    val = VArmDataset('data/val', transform=data_transforms['val']),
-    # Do not transform test data
-    test = VArmDataset('data/test', transform=data_transforms['val']),
-)
-dset_loaders = {x: torch.utils.data.DataLoader(dsets[x], batch_size=4,
-                                               shuffle=True, num_workers=4)
-                for x in ['train', 'val']}
-dset_sizes = {x: len(dsets[x]) for x in ['train', 'val']}
-# dset_classes = dsets['train'].classes
+    dsets = dict(
+        train = VArmDataset('data/train', transform=data_transforms['train']),
+        val = VArmDataset('data/val', transform=data_transforms['val']),
+        # Do not transform test data
+        test = VArmDataset('data/test', transform=data_transforms['val']),
+    )
 
-use_gpu = torch.cuda.is_available()
+    dset_loaders = {x: torch.utils.data.DataLoader(dsets[x], batch_size=4,
+                                                   shuffle=True, num_workers=4)
+                    for x in ['train']}
+    # No random shuffle for val and test set
+    dset_loaders1 = {x: torch.utils.data.DataLoader(dsets[x], batch_size=4,
+                                                   shuffle=False, num_workers=4)
+                    for x in ['val', 'test']}
+    dset_loaders.update(dset_loaders1)
 
-# Get a batch of training data
-inputs, classes = next(iter(dset_loaders['train']))
+    dset_sizes = {x: len(dsets[x]) for x in ['train', 'val', 'test']}
+    # dset_classes = dsets['train'].classes
 
-# Make a grid from batch
-out = torchvision.utils.make_grid(inputs)
+    use_gpu = torch.cuda.is_available()
+    return dset_loaders
 
-imshow(out, title=[format_title(x) for x in classes])
+dset_loaders = get_dataloader()
+
+def visualize_data(dbtype):
+    # Get a batch of training data
+    inputs, classes = next(iter(dset_loaders[dbtype]))
+    # Make a grid from batch
+    out = torchvision.utils.make_grid(inputs)
+    imshow(out, title=[format_title(x) for x in classes])
 
 def train_model(model, criterion, optimizer, lr_scheduler, num_epochs=25):
     since = time.time()
@@ -201,7 +177,7 @@ def main():
     model_ft = train_model(model_ft, criterion, optimizer_ft, exp_lr_scheduler,
                            num_epochs=25)
 
-    visualize_model(model_ft)
+    visualize_model(model_ft, dset_loaders)
 
     # Here, we need to freeze all the network except the final layer. We need
     # to set ``requires_grad == False`` to freeze the parameters so that the
@@ -241,14 +217,107 @@ def main():
                              exp_lr_scheduler, num_epochs=25)
     return model_conv
 
-if not os.path.isfile('arm.model'):
-    model_conv = main()
-    with open('arm.model', 'w') as f:
-        torch.save(model_conv, f)
-else:
-    with open('arm.model') as f:
-        model_conv = torch.load(f)
-    visualize_model(model_conv)
+def visualize_prediction_html(model, dset_loaders, dbtype):
+    def _format_np(np_arr):
+        np_str = ' , '.join(['%.2f' % v for v in np_arr.tolist()])
+        return np_str
+    # write the prediction to an html file
+    f = open('%s.html' % dbtype, 'w')
+    filenames = dset_loaders[dbtype].dataset.imgs # image filenames
+    cursor = 0
+    row_template = '''
+    <tr>
+        <td><img width='500px' src='{img}'></img></td>
+        <td>
+            gt: {label}<br>
+            prediction: {prediction}<br>
+            diff: {diff}<br>
+        </td>
+    </tr>
+    '''
+    html_content = ''
+    for i, data in enumerate(dset_loaders[dbtype]):
+        if cursor > 100:
+            break
+        inputs, labels = data
+        inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
+        outputs = model(inputs)
+        # print(i, filenames[i])
+        # print(outputs)
+        # print(labels)
+        for j in range(len(outputs)):
+            prediction = outputs[j].cpu().data.numpy()
+            label = labels[j].cpu().data.numpy()
+            filename = filenames[cursor]
+            cursor += 1
+            print(filename, prediction, label)
+            html_content += row_template.format(img=filename, label=_format_np(label), prediction=_format_np(prediction),
+            diff=_format_np(label - prediction)
+            )
+
+    f.write('<table>%s</table>' % html_content)
+    f.close()
+
+def get_prediction(model, dset_loaders, dbtype):
+    labels = []; outputs = []; images = []
+    images_so_far = 0
+    cursor = 0
+    dset_loader = dset_loaders[dbtype]
+    for i, data in enumerate(dset_loader):
+        inputs, _labels = data
+        use_gpu = torch.cuda.is_available()
+        inputs, _labels = Variable(inputs.cuda()), Variable(_labels.cuda())
+        _outputs = model(inputs)
+
+        images_so_far += inputs.size()[0]
+        for j in range(inputs.size()[0]):
+            labels.append(_labels[j].cpu().data.numpy())
+            outputs.append(_outputs[j].cpu().data.numpy())
+            images.append(dset_loader.dataset.imgs[cursor])
+            cursor += 1
+
+    return outputs, labels, images
+
+
+def acc_summary(outputs, labels):
+    '''
+    Output the accuracy summary on the testset
+    '''
+    # The MAE (mean absolute error)
+    # base
+    joints = ['base', 'upper', 'lower']
+    for col_id in range(3):
+        col1 = np.array([v[col_id] for v in outputs])
+        col2 = np.array([v[col_id] for v in labels])
+
+        mean_abs_val = np.mean(abs(col1 - col2))
+        print('For joint %s, num %d, MAE %f' % (joints[col_id], len(col1), mean_abs_val))
+
+        for threshold in [5, 10, 15]:
+            pass
+
+
+
+if __name__ == '__main__':
+    # visualize_data('train')
+    # visualize_data('test')
+    if not os.path.isfile('arm.model'):
+        model_conv = main()
+        with open('arm.model', 'w') as f:
+            torch.save(model_conv, f)
+    else:
+        with open('arm.model') as f:
+            model_conv = torch.load(f)
+    # visualize_model(model_conv, dset_loaders)
+    # visualize_prediction_html(model_conv, dset_loaders, 'val')
+    # visualize_prediction_html(model_conv, dset_loaders, 'test')
+    [outputs, labels, images] = get_prediction(model_conv, dset_loaders, 'val')
+    print('Acc summary for val')
+    acc_summary(outputs, labels)
+
+    [outputs, labels, images] = get_prediction(model_conv, dset_loaders, 'test')
+    print('Acc summary for test')
+    acc_summary(outputs, labels)
 
     # Draw the training plot
 
