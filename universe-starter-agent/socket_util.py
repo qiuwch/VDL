@@ -92,7 +92,7 @@ def await_signal(sock, content, timeout_val):
     Blocks and waits for a specific signal packet, which might contain payload data
     @param sock The socket to use
     @param content Content of the signal
-    @param timeout_val Timeout value for waiting for the signal
+    @param timeout_val Timeout value for waiting for the signal, or None if no timeout
     @param The received signal packet, or None if timed out
     '''
     print('Waiting for signal ' + content + '...')
@@ -197,6 +197,7 @@ def socket_recv_chucked_data(sock, self_IP, queue, num_peers, rcv_msg_num, verbo
                             print('Full packet received; adding to queue')
     except socket.timeout:
         if verbose_lvl >= 1:
-            print('socket_recv_chucked_data timed out')
+            #TODO re print('socket_recv_chucked_data timed out')
+            pass
     
     return rcv_msg_num

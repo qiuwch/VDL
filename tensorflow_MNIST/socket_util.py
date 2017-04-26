@@ -87,17 +87,35 @@ def close_UDP_mcast_peer(sock):
     '''
     sock.close()
 
-
+def await_signal(sock, content, timeout_val):
+    '''
+    Blocks and waits for a specific signal packet, which might contain payload data
+    @param sock The socket to use
+    @param content Content of the signal
+    @param timeout_val Timeout value for waiting for the signal
+    @param The received signal packet, or None if timed out
+    '''
+    print('Waiting for signal ' + content + '...')
+    try:
+        sock.settimeout(timeout_val)
+        signal = sock.recvfrom(len(content))[0]
+    except socket.timeout:
+        if params.VERBOSE_LVL >= 2:
+            print('await signal ' + content + ' timed out')
+        return None
+    
+    sock.settimeout(None)
+    assert(signal[:len(content)] == content)
+    print('Signal received.')
+    return signal
+    
+    
 def await_start_mcast(sock):
     '''
     Blocks and waits for start_mcast signal
-    @params sock The socket to use
+    @param sock The socket to use
     '''
-    
-    print('Waiting for start_mcast signal...')
-    signal = sock.recvfrom(params.LEN_START_MCAST_SIGNAL)[0]
-    assert (signal == params.START_MCAST_SIGNAL)
-    print('Signal received.')
+    await_signal(sock, params.START_MCAST_SIGNAL, None)
     
 
 def socket_send_data_chucks(sock, data, mcast_destination, msg_sent):
@@ -115,6 +133,7 @@ def socket_send_data_chucks(sock, data, mcast_destination, msg_sent):
     msg_sent += 1
     
     for i in xrange(0, sys.getsizeof(data), params.MAX_PACKET_SIZE):
+        time.sleep(0.01) # TODO params sleep time?
         data_chuck = data[i : i + params.MAX_PACKET_SIZE]
         sock.sendto(data_chuck, mcast_destination)
         msg_sent += 1
@@ -171,6 +190,7 @@ def socket_recv_chucked_data(sock, self_IP, queue, num_peers, rcv_msg_num, verbo
                         sys.stdout.write('.')
                     if addr_dict[addr][0] == 0:
                         queue.put(addr_dict[addr][1])
+                        print(addr_dict[addr][1][:3]) #TODODO rm
                         queue_cnt += 1
                         addr_dict[addr] = [0, '']
                         if verbose_lvl >= 2:

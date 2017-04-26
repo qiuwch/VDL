@@ -15,4 +15,4 @@ MAX_BITS_IMAGE_SIZE = 24            # maximum number of bits used to represent t
 IMAGE_SIZE_PACKET_TAG = "Arnold"
 LEN_IMAGE_SIZE_PACKET_TAG = 6
 
-VERBOSE_LVL = 3
+VERBOSE_LVL = 1
