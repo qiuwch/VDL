@@ -263,11 +263,10 @@ should be computed.
             
 
     def start_listen_thread(self):
-        pass
-        # if self.num_workers > 1:
-            # if sock_listen_thread:
-                # sock_listen_thread.start()
-        # time.sleep(0.5)
+        if self.num_workers == 1:
+            return
+        if sock_listen_thread:
+            sock_listen_thread.start()
                 
     def sync_initial_weights(self, sess, var_list):
         pass
@@ -293,8 +292,6 @@ should be computed.
     def start(self, sess, summary_writer):
         self.runner.start_runner(sess, summary_writer)
         self.summary_writer = summary_writer
-        if sock_listen_thread:
-            sock_listen_thread.start()
 
     def pull_batch_from_queue(self):
         """
