@@ -190,14 +190,12 @@ def socket_recv_chucked_data(sock, self_IP, queue, num_peers, rcv_msg_num, verbo
                         sys.stdout.write('.')
                     if addr_dict[addr][0] == 0:
                         queue.put(addr_dict[addr][1])
-                        print(addr_dict[addr][1][:3]) #TODODO rm
                         queue_cnt += 1
                         addr_dict[addr] = [0, '']
                         if verbose_lvl >= 2:
                             print('Full packet received; adding to queue')
     except socket.timeout:
-        if verbose_lvl >= 1:
-            #TODO re print('socket_recv_chucked_data timed out')
-            pass
+        if verbose_lvl >= 2:
+            print('socket_recv_chucked_data timed out')
     
     return rcv_msg_num

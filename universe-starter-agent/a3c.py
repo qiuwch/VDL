@@ -15,6 +15,7 @@ use_tf12_api = distutils.version.LooseVersion(tf.VERSION) >= distutils.version.L
 sock_listen_thread = None
 
 import pdb, sys
+import params
 import time
 from pprint import pprint
 
@@ -269,25 +270,34 @@ should be computed.
             sock_listen_thread.start()
                 
     def sync_initial_weights(self, sess, var_list):
-        pass
-        # if self.num_workers > 1:
-            # if self.worker_id == 0:
-                # print('Initial values of weights')
-                # var_init = sess.run(var_list) # After training
-                # pprint(var_init) 
-                # var_init_data = pickle.dumps(var_init) 
-                # self.msg_sent = socket_util.socket_send_data_chucks(self.sock, var_init_data, self.mcast_destination, self.msg_sent)
-            # else:
-                # print('Wait initial weights')
-                # while self.inc_msg_q.empty():
-                    # pass
-                # print('Got Initial value from worker 0')
-                # # Receive remote var data and use it as a start signal
-                # remote_var_data = self.inc_msg_q.get(False)
-                # remote_var = pickle.loads(remote_var_data)
-                # assign_op = [v.assign(data) for (v, data) in zip(var_list, remote_var)]
-                # sess.run(assign_op)
-            # print('Sync initial weights completed')
+        if self.num_workers == 1:
+            return
+            
+        if self.worker_id == 0:
+            print('Initial values of weights')
+            var_init = sess.run(var_list) # After training
+            pprint(var_init) 
+            var_init_data = pickle.dumps(var_init) 
+            time.sleep(1)  # wait for other workers' listen thread to start up
+            socket_util.socket_send_data_chucks(self.sock, params.INIT_WEIGHTS_TAG + var_init_data, self.mcast_destination, 0)
+            # Discard your own initial weights message
+            while self.inc_msg_q.empty():
+                time.sleep(0.05)
+            self.inc_msg_q.get(False)
+        else:
+            print('Wait initial weights')
+            while self.inc_msg_q.empty():
+                time.sleep(0.05)
+            print('Got Initial value from worker 0')
+            # Receive remote var data and use it as a start signal
+            remote_var_data = self.inc_msg_q.get(False)
+            if remote_var_data[:len(params.INIT_WEIGHTS_TAG)] != params.INIT_WEIGHTS_TAG:
+                print('Error! Received data other than initial weights. Exiting...')
+                sys.exit(-1)
+            remote_var = pickle.loads(remote_var_data[len(params.INIT_WEIGHTS_TAG):])
+            assign_op = [v.assign(data) for (v, data) in zip(var_list, remote_var)]
+            sess.run(assign_op)
+        print('Sync initial weights completed')
     
     def start(self, sess, summary_writer):
         self.runner.start_runner(sess, summary_writer)

@@ -7,6 +7,7 @@ PEER_PORT_NUM = 12000
 SOCK_TIMEOUT_VAL = 0.05
 
 START_SPREAD_SIGNAL = START_MCAST_SIGNAL = "START_MCAST"
+INIT_WEIGHTS_TAG = "INIT_W"
 
 MAX_PACKET_SIZE = 1460              # maximum UDP packet size to send over the network
 
