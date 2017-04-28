@@ -19,6 +19,7 @@ sock_listen_thread = None
 
 import pdb
 
+import env_conf
 
 def discount(x, gamma):
     return scipy.signal.lfilter([1], [1, -gamma], x[::-1], axis=0)[::-1]
@@ -82,7 +83,7 @@ One of the key distinctions between a normal environment and a universe environm
 is that a universe environment is _real time_.  This means that there should be a thread
 that would constantly interact with the environment and tell it what to do.  This thread is here.
 """
-    def __init__(self, env, policy, num_local_steps, visualise, port, num_actors):
+    def __init__(self, env, policy, num_local_steps, visualise, port, num_actors, conf):
         threading.Thread.__init__(self)
         self.queue = queue.Queue(5)
         self.num_local_steps = num_local_steps
@@ -95,6 +96,7 @@ that would constantly interact with the environment and tell it what to do.  Thi
         self.visualise = visualise
         self.port = port
         self.num_actors = num_actors
+        self.conf = conf
 #        print ('22222')
 
     def start_runner(self, sess, summary_writer):
@@ -108,7 +110,7 @@ that would constantly interact with the environment and tell it what to do.  Thi
 
     def _run(self):
 #        print ('44444')
-        rollout_provider = env_runner(self.env, self.policy, self.num_local_steps, self.summary_writer, self.visualise, self.port, self.num_actors)
+        rollout_provider = env_runner(self.env, self.policy, self.num_local_steps, self.summary_writer, self.visualise, self.port, self.num_actors, self.conf)
         while True:
             # the timeout variable exists because apparently, if one worker dies, the other workers
             # won't die with it, unless the timeout is set to some large number.  This is an empirical
@@ -118,7 +120,7 @@ that would constantly interact with the environment and tell it what to do.  Thi
 
 
 class SocketRecvThread(threading.Thread):
-    def __init__(self, connection_socket, policy, num_local_steps, summary_writer, render, global_rollout, sess):
+    def __init__(self, connection_socket, policy, num_local_steps, summary_writer, render, global_rollout, sess, conf):
 #        super(SocketRecvThread, self).__init__()
         threading.Thread.__init__(self)
         self.connection_socket = connection_socket
@@ -130,6 +132,7 @@ class SocketRecvThread(threading.Thread):
         self.buffer_size = 1400
         self.daemon = True
         self.sess = sess
+        self.conf = conf
 #        print ('55555')
 
     def _frag_recv(self, mess_len):
@@ -200,10 +203,10 @@ class SocketRecvThread(threading.Thread):
                     self.summary_writer.add_summary(summary, self.policy.global_step.eval())
                     self.summary_writer.flush()
 
-                timestep_limit = self.env.spec.tags.get('wrapper_config.TimeLimit.max_episode_steps')
+                timestep_limit = self.conf[timestep_limit]
                 if recovered_message['terminal'] or length >= timestep_limit:
                     terminal_end = True
-                    if length >= timestep_limit or not self.env.metadata.get('semantics.autoreset'):
+                    if length >= timestep_limit or not self.conf[autoreset]:
                         #last_state = self.env.reset()
                         self.connection_socket.send('rest')
                         raw_message_len = self.connection_socket.recv(4)
@@ -225,7 +228,7 @@ class SocketRecvThread(threading.Thread):
 
 
 
-def env_runner(env, policy, num_local_steps, summary_writer, render, port, num_actors):
+def env_runner(env, policy, num_local_steps, summary_writer, render, port, num_actors, conf):
     """
 The logic of the thread runner.  In brief, it constantly keeps on running
 the policy, and as long as the rollout exceeds a certain length, the thread
@@ -295,7 +298,7 @@ runner appends the policy to the queue.
         for i in range(0, num_actors):
             connection_socket, addr = server_socket.accept()
             client_addrs.append(addr)
-            recv_thread = SocketRecvThread(connection_socket, policy, num_local_steps, summary_writer, render, Global, tf.get_default_session())
+            recv_thread = SocketRecvThread(connection_socket, policy, num_local_steps, summary_writer, render, Global, tf.get_default_session(), conf)
             recv_threads.append(recv_thread)
             recv_thread.start()
 
@@ -309,7 +312,7 @@ runner appends the policy to the queue.
                 last_rollout = Global[0]
  
 class A3C(object):
-    def __init__(self, env, task, visualise, num_workers, verbose_lvl, port, num_actors):
+    def __init__(self, env, task, visualise, num_workers, verbose_lvl, port, num_actors, env_id):
         """
 An implementation of the A3C algorithm that is reasonably well-tuned for the VNC environments.
 Below, we will have a modest amount of complexity due to the way TensorFlow handles data parallelism.
@@ -319,12 +322,15 @@ should be computed.
         global sock_listen_thread
         self.env = env
         self.task = task
+        self.env_id = env_id
+
+        conf = env_conf.get(self.env_id)
 
         with tf.variable_scope("local"):
-            self.local_network = pi = LSTMPolicy(env.observation_space.shape, env.action_space.n)
+            self.local_network = pi = LSTMPolicy(conf[observation_space_shape], conf[action_space_n])
             self.local_network.global_step = tf.get_variable("global_step", [], tf.int32, initializer=tf.constant_initializer(0, dtype=tf.int32), trainable=False)
 
-        self.ac = tf.placeholder(tf.float32, [None, env.action_space.n], name="ac")
+        self.ac = tf.placeholder(tf.float32, [None, conf[action_space_n]], name="ac")
         self.adv = tf.placeholder(tf.float32, [None], name="adv")
         self.r = tf.placeholder(tf.float32, [None], name="r")
 
@@ -350,7 +356,7 @@ should be computed.
         # slows down learning.  In this code, we found that making local steps be much
         # smaller than 20 makes the algorithm more difficult to tune and to get to work.
 #        print ('11111')
-        self.runner = RunnerThread(env, pi, 20, visualise, port, num_actors)
+        self.runner = RunnerThread(env, pi, 20, visualise, port, num_actors, conf)
 
         grads = tf.gradients(self.loss, pi.var_list)
 
