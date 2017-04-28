@@ -95,11 +95,13 @@ def main():
             # action = 0
             # send_timer.tic()
 '''
-    env.reset()
+    observation = env.reset()
+    send_us(observation, 0, 0, 0)
     while True:
         raw_action = clientSocket.recv(4)
         if raw_action == 'rest':
-            env.reset()
+            observation = env.reset()
+            send_us(observation, 0, 0, 0)
         else:
             action = struct.unpack('I', raw_action)[0]
             # send_timer.toc()
@@ -130,9 +132,6 @@ def main():
     print frame_count
 
     # Print how much time is spent in the env.step and how much time is spent in sending messages
-    while True:
-        pass
-
 
     #clientSocket.close()
 if __name__ == '__main__':

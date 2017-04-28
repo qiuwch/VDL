@@ -118,11 +118,10 @@ that would constantly interact with the environment and tell it what to do.  Thi
 
 
 class SocketRecvThread(threading.Thread):
-    def __init__(self, connection_socket, env, policy, num_local_steps, summary_writer, render, global_rollout, sess):
+    def __init__(self, connection_socket, policy, num_local_steps, summary_writer, render, global_rollout, sess):
 #        super(SocketRecvThread, self).__init__()
         threading.Thread.__init__(self)
         self.connection_socket = connection_socket
-        self.env = env
         self.policy = policy
         self.num_local_steps = num_local_steps
         self.summary_writer = summary_writer
@@ -148,7 +147,14 @@ class SocketRecvThread(threading.Thread):
 
     def _run(self):
 #        print ('66666')
-        last_state = self.env.reset()
+        #last_state = self.env.reset()
+        raw_message_len = self.connection_socket.recv(4)
+        if raw_message_len:
+            message_len = struct.unpack('I', raw_message_len)[0]
+            message = self._frag_recv(message_len)
+            recovered_message = pickle.loads(message)
+        last_state = recovered_message['obs']
+        
         last_features = self.policy.get_initial_features()
         length = 0
         rewards = 0
@@ -198,8 +204,14 @@ class SocketRecvThread(threading.Thread):
                 if recovered_message['terminal'] or length >= timestep_limit:
                     terminal_end = True
                     if length >= timestep_limit or not self.env.metadata.get('semantics.autoreset'):
-                        last_state = self.env.reset()
+                        #last_state = self.env.reset()
                         self.connection_socket.send('rest')
+                        raw_message_len = self.connection_socket.recv(4)
+                        if raw_message_len:
+                            message_len = struct.unpack('I', raw_message_len)[0]
+                            message = self._frag_recv(message_len)
+                            recovered_message = pickle.loads(message)
+                        last_state = recovered_message['obs']
                     last_features = self.policy.get_initial_features()
                     print("Episode finished. Sum of rewards: %d. Length: %d" % (rewards, length))
                     length = 0
@@ -283,7 +295,7 @@ runner appends the policy to the queue.
         for i in range(0, num_actors):
             connection_socket, addr = server_socket.accept()
             client_addrs.append(addr)
-            recv_thread = SocketRecvThread(connection_socket, env, policy, num_local_steps, summary_writer, render, Global, tf.get_default_session())
+            recv_thread = SocketRecvThread(connection_socket, policy, num_local_steps, summary_writer, render, Global, tf.get_default_session())
             recv_threads.append(recv_thread)
             recv_thread.start()
 

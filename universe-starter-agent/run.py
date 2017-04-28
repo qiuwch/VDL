@@ -24,9 +24,12 @@ class FastSaver(tf.train.Saver):
                                     meta_graph_suffix, False)
 
 def run(args):
-    env = create_env(args.env_id, client_id=str(args.task), remotes=args.remotes)
-    trainer = a3c.A3C(env, args.task, args.visualise, args.num_workers, args.verbose_lvl, args.port, args.num_actors)
-
+    if args.num_actors == 0:
+        env = create_env(args.env_id, client_id=str(args.task), remotes=args.remotes)
+        trainer = a3c.A3C(env, args.task, args.visualise, args.num_workers, args.verbose_lvl, args.port, args.num_actors)
+    else:
+        trainer = a3c.A3C(0, args.task, args.visualise, args.num_workers, args.verbose_lvl, args.port, args.num_actors)
+ 
     # Variable names that start with "local" are not saved in checkpoints.
     if use_tf12_api:
         variables_to_save = [v for v in tf.global_variables() if not v.name.startswith("local")]
