@@ -14,8 +14,8 @@ pong_conf = dict(
 
 def get(env_name):
     confs = dict(
-        PongDeterministic-v3 = pong_conf,
-        flashgames.NeonRace-v0 = neoncar_conf,
+        Pong = pong_conf,
+        Neon = neoncar_conf,
     )
     return confs[env_name]
 

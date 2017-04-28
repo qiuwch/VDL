@@ -203,10 +203,10 @@ class SocketRecvThread(threading.Thread):
                     self.summary_writer.add_summary(summary, self.policy.global_step.eval())
                     self.summary_writer.flush()
 
-                timestep_limit = self.conf[timestep_limit]
+                timestep_limit = self.conf['timestep_limit']
                 if recovered_message['terminal'] or length >= timestep_limit:
                     terminal_end = True
-                    if length >= timestep_limit or not self.conf[autoreset]:
+                    if length >= timestep_limit or not self.conf['autoreset']:
                         #last_state = self.env.reset()
                         self.connection_socket.send('rest')
                         raw_message_len = self.connection_socket.recv(4)
@@ -327,10 +327,10 @@ should be computed.
         conf = env_conf.get(self.env_id)
 
         with tf.variable_scope("local"):
-            self.local_network = pi = LSTMPolicy(conf[observation_space_shape], conf[action_space_n])
+            self.local_network = pi = LSTMPolicy(conf['observation_space_shape'], conf['action_space_n'])
             self.local_network.global_step = tf.get_variable("global_step", [], tf.int32, initializer=tf.constant_initializer(0, dtype=tf.int32), trainable=False)
 
-        self.ac = tf.placeholder(tf.float32, [None, conf[action_space_n]], name="ac")
+        self.ac = tf.placeholder(tf.float32, [None, conf['action_space_n']], name="ac")
         self.adv = tf.placeholder(tf.float32, [None], name="adv")
         self.r = tf.placeholder(tf.float32, [None], name="r")
 
