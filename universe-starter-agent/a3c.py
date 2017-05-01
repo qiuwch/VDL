@@ -8,11 +8,11 @@ import scipy.signal
 import threading
 import distutils.version
 
-import socket_util
+import spread_util
 import Queue
 import cPickle as pickle
 use_tf12_api = distutils.version.LooseVersion(tf.VERSION) >= distutils.version.LooseVersion('0.12.0')
-sock_listen_thread = None
+spread_listen_thread = None
 
 import pdb, sys
 import params
@@ -252,22 +252,20 @@ should be computed.
         # multicast setup
         self.inc_msg_q = Queue.Queue()
         self.ret_val = Queue.Queue()
-        self.msg_sent = 0
         self.num_workers = num_workers
         self.worker_id = worker_id
 
         if self.num_workers > 1: # Only wait when we are using mutilple workers
-            self.sock, self_IP, self.mcast_destination = socket_util.set_up_UDP_mcast_peer()
-            sock_listen_thread = socket_util.SockListenThread(self.sock, self_IP, self.inc_msg_q, num_workers, self.ret_val)
-            #TODO while waiting, other stuff are still happening
-            socket_util.await_start_mcast(self.sock)
+            self.mbox, self.send_MSG, self.rcv_MSG, self.group_list = spread_util.set_up_spread_peer()
+            spread_listen_thread = spread_util.SpreadListenThread(self.mbox, self.rcv_MSG, self.group_list, self.inc_msg_q, self.ret_val)
+            spread_util.await_start_spread(self.mbox, self.rcv_MSG, self.group_list)
             
 
     def start_listen_thread(self):
         if self.num_workers == 1:
             return
-        if sock_listen_thread:
-            sock_listen_thread.start()
+        if spread_listen_thread:
+            spread_listen_thread.start()
                 
     def sync_initial_weights(self, sess, var_list):
         if self.num_workers == 1:
@@ -277,13 +275,12 @@ should be computed.
             print('Initial values of weights')
             var_init = sess.run(var_list) # After training
             pprint(var_init) 
-            var_init_data = pickle.dumps(var_init) 
-            time.sleep(1)  # wait for other workers' listen thread to start up
-            socket_util.socket_send_data_chucks(self.sock, params.INIT_WEIGHTS_TAG + var_init_data, self.mcast_destination, 0)
-            # Discard your own initial weights message
-            while self.inc_msg_q.empty():
-                time.sleep(0.05)
-            self.inc_msg_q.get(False)
+            var_init_data = pickle.dumps(var_init)
+            #TODODO rm import os 
+            #var_init_data = os.urandom(140000)
+            # Debug:
+            print( sys.getsizeof(var_init_data) )  # ~6340000 byes
+            spread_util.send(self.mbox, self.send_MSG, params.INIT_WEIGHTS_TAG + var_init_data)
         else:
             print('Wait initial weights')
             while self.inc_msg_q.empty():
@@ -357,9 +354,11 @@ server.
                 var1 = sess.run(self.local_network.var_list) # After training
                 if var0 != None:
                     var_diff = [a - b for (a,b) in zip(var1, var0)]
-                    var_diff_data = pickle.dumps(var_diff, -1)  # size is 2352348 bytes
+                    var_diff_data = pickle.dumps(var_diff, -1)  # size is 2352348 bytes 
                     print('Sync weights')
-                    self.msg_sent = socket_util.socket_send_data_chucks(self.sock, var_diff_data, self.mcast_destination, self.msg_sent)
+                    # Debug:
+                    print( sys.getsizeof(var_diff_data) )
+                    spread_util.send(self.mbox, self.send_MSG, var_diff_data)
                 var0 = sess.run(self.local_network.var_list) # A list of numpy array
 
             # Handle each message in the socket queue
@@ -378,9 +377,9 @@ server.
         self.local_steps += 1
 
 
-def stop_sock_listen_thread():
-    if sock_listen_thread:
-        sock_listen_thread.stop()
+def stop_listen_thread():
+    if spread_listen_thread:
+        spread_listen_thread.stop()
 
 import atexit
-atexit.register(stop_sock_listen_thread)
+atexit.register(stop_listen_thread)

@@ -33,7 +33,7 @@ python run.py --num-workers 3 --log-dir train-log/pong-multi-learners-2 -id 2
 
 In any machine
 ```shell
-python start_mcast.py
+python start_spread.py
 ```
 
 To clean up the train log
