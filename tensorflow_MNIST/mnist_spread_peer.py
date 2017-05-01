@@ -148,7 +148,7 @@ def train(sess, mnist, mbox, send_MSG, rcv_MSG, group_list, num_peers, my_peer_I
     # num_new_msg = inc_msg_q.qsize()
     while inc_msg_q.qsize() < num_peers - 1:
         if params.VERBOSE_LVL >= 3:
-            pass #TODODO print ('WAIT ', num_rounds * (num_peers - 1), MSG_RCV, inc_msg_q.qsize())
+            print ('WAIT ', num_rounds * (num_peers - 1), MSG_RCV, inc_msg_q.qsize())
         time.sleep(0.001)
         pass
     num_new_msg = num_peers - 1
