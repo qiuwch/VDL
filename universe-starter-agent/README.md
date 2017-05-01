@@ -36,4 +36,8 @@ In any machine
 python start_mcast.py
 ```
 
+To clean up the train log
+```shell
+rm train-log/pong-multi-learners* -r
+```
 
