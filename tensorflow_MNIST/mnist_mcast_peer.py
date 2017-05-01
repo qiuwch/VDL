@@ -31,7 +31,7 @@ def main(_):
   Main function running a MNIST Tensorflow multicast peer program
   '''
   
-  num_peers, my_peer_ID, batch_size, num_rounds, verbose_lvl = parse_cmd_args()
+  num_peers, my_peer_ID, batch_size, num_rounds = parse_cmd_args()
   # Import data
   mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
 
@@ -43,7 +43,7 @@ def main(_):
   socket_util.await_start_mcast(sock)
   
   t0 = time.time()
-  msg_sent, rcv_msg_num = train(sess, mnist, sock, self_IP, mcast_destination, num_peers, my_peer_ID, batch_size, num_rounds, tf_model_objects, verbose_lvl)
+  msg_sent, rcv_msg_num = train(sess, mnist, sock, self_IP, mcast_destination, num_peers, my_peer_ID, batch_size, num_rounds, tf_model_objects)
   
   t1 = time.time()
   socket_util.close_UDP_mcast_peer(sock)
@@ -62,9 +62,8 @@ def parse_cmd_args():
   my_peer_ID = int(sys.argv[2]) - 1
   batch_size = int(sys.argv[3])
   num_rounds = int(sys.argv[4])
-  verbose_lvl = params.VERBOSE_LVL
   
-  return (num_peers, my_peer_ID, batch_size, num_rounds, verbose_lvl)
+  return (num_peers, my_peer_ID, batch_size, num_rounds)
   
 def create_model():
   '''
@@ -95,7 +94,7 @@ def create_model():
   
   return (x, W, b, y, y_, train_step)
 
-def train(sess, mnist, sock, self_IP, mcast_destination, num_peers, my_peer_ID, batch_size, num_rounds, tf_model_objects, verbose_lvl):
+def train(sess, mnist, sock, self_IP, mcast_destination, num_peers, my_peer_ID, batch_size, num_rounds, tf_model_objects):
   '''
   Train the Tensorflow MNIST model
   @param sess Tensorflow session
@@ -108,7 +107,6 @@ def train(sess, mnist, sock, self_IP, mcast_destination, num_peers, my_peer_ID, 
   @param batch_size Batch size
   @param num_rounds Number of rounds per machine
   @param tf_model_objects Tensorflow model objects
-  @param verbose_lvl Level of verboseness
   @return (Total number of messages sent, Total number of messages received from other peers)
   '''
   
@@ -117,7 +115,7 @@ def train(sess, mnist, sock, self_IP, mcast_destination, num_peers, my_peer_ID, 
   inc_msg_q = Queue.Queue()
   ret_val = Queue.Queue()
   msg_sent = 0
-  sock_listen_thread = create_sock_listen_thread(sock, self_IP, inc_msg_q, num_peers, ret_val, verbose_lvl)
+  sock_listen_thread = create_sock_listen_thread(sock, self_IP, inc_msg_q, num_peers, ret_val)
   
   for _ in range(num_rounds):    
     # Run one training step, training on only every <num_peers> batch
@@ -143,7 +141,7 @@ def train(sess, mnist, sock, self_IP, mcast_destination, num_peers, my_peer_ID, 
     
     # Handle each message in the socket queue
     num_new_msg = inc_msg_q.qsize()
-    if verbose_lvl >= 3:
+    if params.VERBOSE_LVL >= 3:
         print("Queue handle; num msg = ", num_new_msg)
     for _ in xrange(num_new_msg):
         # Process received delta_W, delta_b from other peers
@@ -159,7 +157,7 @@ def train(sess, mnist, sock, self_IP, mcast_destination, num_peers, my_peer_ID, 
   rcv_msg_num = ret_val.get()
   # Handle last remaining message in the socket queue
   num_new_msg = inc_msg_q.qsize()
-  if verbose_lvl >= 3:
+  if params.VERBOSE_LVL >= 3:
     print("final Queue handle; num msg = ", num_new_msg)
   for _ in xrange(num_new_msg):
     # Process received delta_W, delta_b from other peers
@@ -173,7 +171,7 @@ def train(sess, mnist, sock, self_IP, mcast_destination, num_peers, my_peer_ID, 
     
   return (msg_sent, rcv_msg_num)
 
-def create_sock_listen_thread(sock, self_IP, inc_msg_q, num_peers, ret_val, verbose_lvl):
+def create_sock_listen_thread(sock, self_IP, inc_msg_q, num_peers, ret_val):
   '''
   Create a SockListenThread and run it
   @params sock The socket to use
@@ -181,10 +179,9 @@ def create_sock_listen_thread(sock, self_IP, inc_msg_q, num_peers, ret_val, verb
   @param inc_msg_q Incoming message queue storing messages from other peers
   @param num_peers Number of peers
   @param ret_val The queue to store the return value of rcv_msg_num
-  @param verbose_lvl Level of verboseness
   @return The thread
   '''
-  sock_listen_thread = socket_util.SockListenThread(sock, self_IP, inc_msg_q, num_peers, ret_val, verbose_lvl)
+  sock_listen_thread = socket_util.SockListenThread(sock, self_IP, inc_msg_q, num_peers, ret_val)
   sock_listen_thread.start()
   return sock_listen_thread
     

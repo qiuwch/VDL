@@ -16,7 +16,7 @@ class SockListenThread(threading.Thread):
     Thread class that listens for socket message receiving. It terminates when stop() is called.
     """
 
-    def __init__(self, sock, self_IP, inc_msg_q, num_peers, ret_val, verbose_lvl = 1):
+    def __init__(self, sock, self_IP, inc_msg_q, num_peers, ret_val):
         super(SockListenThread, self).__init__()
         self.sock = sock
         self.self_IP = self_IP
@@ -24,7 +24,7 @@ class SockListenThread(threading.Thread):
         self.num_peers = num_peers
         self.ret_val = ret_val
         self.rcv_msg_num = 0
-        self.verbose_lvl = verbose_lvl
+        self.verbose_lvl = params.VERBOSE_LVL
         self._stop = threading.Event()
         self.daemon = True # Make the daemon = True, so that I can kill this program with ctrl-c
 
@@ -92,7 +92,7 @@ def await_signal(sock, content, timeout_val):
     Blocks and waits for a specific signal packet, which might contain payload data
     @param sock The socket to use
     @param content Content of the signal
-    @param timeout_val Timeout value for waiting for the signal
+    @param timeout_val Timeout value for waiting for the signal, or None if no timeout
     @param The received signal packet, or None if timed out
     '''
     print('Waiting for signal ' + content + '...')
@@ -133,7 +133,7 @@ def socket_send_data_chucks(sock, data, mcast_destination, msg_sent):
     msg_sent += 1
     
     for i in xrange(0, sys.getsizeof(data), params.MAX_PACKET_SIZE):
-        time.sleep(0.01) # TODO params sleep time?
+        time.sleep(params.CHUCK_SEND_INTERVAL)
         data_chuck = data[i : i + params.MAX_PACKET_SIZE]
         sock.sendto(data_chuck, mcast_destination)
         msg_sent += 1
@@ -190,13 +190,12 @@ def socket_recv_chucked_data(sock, self_IP, queue, num_peers, rcv_msg_num, verbo
                         sys.stdout.write('.')
                     if addr_dict[addr][0] == 0:
                         queue.put(addr_dict[addr][1])
-                        print(addr_dict[addr][1][:3]) #TODODO rm
                         queue_cnt += 1
                         addr_dict[addr] = [0, '']
                         if verbose_lvl >= 2:
                             print('Full packet received; adding to queue')
     except socket.timeout:
-        if verbose_lvl >= 1:
+        if verbose_lvl >= 2:
             print('socket_recv_chucked_data timed out')
     
     return rcv_msg_num
