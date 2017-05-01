@@ -18,4 +18,4 @@ MAX_PACKET_SIZE = 1460              # maximum UDP packet size to send over the n
 PACKET_SIZE_TAG = "Arnold"
 LEN_PACKET_SIZE_TAG = 6
 
-VERBOSE_LVL = 2
+VERBOSE_LVL = 1

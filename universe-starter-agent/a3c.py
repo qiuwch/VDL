@@ -179,7 +179,7 @@ Below, we will have a modest amount of complexity due to the way TensorFlow hand
 But overall, we'll define the model, specify its inputs, and describe how the policy gradients step
 should be computed.
 """
-        global sock_listen_thread
+        global spread_listen_thread
         self.env = env
         self.task = task
 
@@ -264,9 +264,7 @@ should be computed.
     def start_listen_thread(self):
         if self.num_workers == 1:
             return
-        print("Panda fun") #TODODO rm
         if spread_listen_thread:
-            print("HUEHUEHUE") #TODODO rm
             spread_listen_thread.start()
                 
     def sync_initial_weights(self, sess, var_list):
@@ -364,15 +362,16 @@ server.
                     spread_util.send_chunks(self.mbox, self.send_MSG, var_diff_data)
                 var0 = sess.run(self.local_network.var_list) # A list of numpy array
 
-            # Handle each message in the socket queue
-            while not self.inc_msg_q.empty():
-                print('Apply remote gradients')
-                # Process received grads_and_vars from other peers
-                remote_var_diff_data = self.inc_msg_q.get(False)
-                remote_var_diff = pickle.loads(remote_var_diff_data)
+                # Handle each message in the socket queue
+                num_new_msg = self.inc_msg_q.qsize() 
+                for _ in xrange(num_new_msg):
+                    print('Apply remote gradients')
+                    # Process received grads_and_vars from other peers
+                    remote_var_diff_data = self.inc_msg_q.get(False)
+                    remote_var_diff = pickle.loads(remote_var_diff_data)
 
-                add_op = [a+b for (a,b) in zip(self.local_network.var_list, remote_var_diff)]
-                sess.run(add_op)
+                    add_op = [a+b for (a,b) in zip(self.local_network.var_list, remote_var_diff)]
+                    sess.run(add_op)
 
         if should_compute_summary:
             self.summary_writer.add_summary(tf.Summary.FromString(fetched[0]))
