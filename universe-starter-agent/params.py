@@ -18,4 +18,6 @@ MAX_PACKET_SIZE = 1460              # maximum UDP packet size to send over the n
 PACKET_SIZE_TAG = "Arnold"
 LEN_PACKET_SIZE_TAG = 6
 
+NEONRACE_SYNC_FREQUENCY = 10
+
 VERBOSE_LVL = 1

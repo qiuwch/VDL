@@ -349,7 +349,7 @@ server.
 
         if self.num_workers > 1:
             sys.stdout.write('\r' + str(self.local_steps))
-            if self.local_steps % 10 == 0:
+            if self.local_steps % params.NEONRACE_SYNC_FREQUENCY == 0:
                 global var0
                 global var1
                 var1 = sess.run(self.local_network.var_list) # After training
@@ -362,16 +362,21 @@ server.
                     spread_util.send_chunks(self.mbox, self.send_MSG, var_diff_data)
                 var0 = sess.run(self.local_network.var_list) # A list of numpy array
 
-                # Handle each message in the socket queue
-                num_new_msg = self.inc_msg_q.qsize() 
-                for _ in xrange(num_new_msg):
-                    print('Apply remote gradients')
-                    # Process received grads_and_vars from other peers
-                    remote_var_diff_data = self.inc_msg_q.get(False)
-                    remote_var_diff = pickle.loads(remote_var_diff_data)
+                if self.local_steps != 0:
+                    # Handle each message in the socket queue
+                    num_expected_msg = self.num_workers - 1
+                    while self.inc_msg_q.qsize() != num_expected_msg:
+                        time.sleep(0.001)
+                        if params.VERBOSE_LVL >= 3:
+                            print ('WAIT ', self.local_steps, num_expected_msg, self.inc_msg_q.qsize())
+                    for _ in xrange(num_expected_msg):
+                        print('Apply remote gradients')
+                        # Process received grads_and_vars from other peers
+                        remote_var_diff_data = self.inc_msg_q.get(False)
+                        remote_var_diff = pickle.loads(remote_var_diff_data)
 
-                    add_op = [a+b for (a,b) in zip(self.local_network.var_list, remote_var_diff)]
-                    sess.run(add_op)
+                        add_op = [a+b for (a,b) in zip(self.local_network.var_list, remote_var_diff)]
+                        sess.run(add_op)
 
         if should_compute_summary:
             self.summary_writer.add_summary(tf.Summary.FromString(fetched[0]))
