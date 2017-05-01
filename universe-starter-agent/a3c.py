@@ -172,7 +172,7 @@ runner appends the policy to the queue.
 var0 = None  # TODO: Change these two to local variables
 var1 = None
 class A3C(object):
-    def __init__(self, env, task, visualise, num_workers, worker_id, verbose_lvl):
+    def __init__(self, env, task, visualise, num_workers, worker_id):
         """
 An implementation of the A3C algorithm that is reasonably well-tuned for the VNC environments.
 Below, we will have a modest amount of complexity due to the way TensorFlow handles data parallelism.
@@ -258,7 +258,7 @@ should be computed.
 
         if self.num_workers > 1: # Only wait when we are using mutilple workers
             self.sock, self_IP, self.mcast_destination = socket_util.set_up_UDP_mcast_peer()
-            sock_listen_thread = socket_util.SockListenThread(self.sock, self_IP, self.inc_msg_q, num_workers, self.ret_val, verbose_lvl)
+            sock_listen_thread = socket_util.SockListenThread(self.sock, self_IP, self.inc_msg_q, num_workers, self.ret_val)
             #TODO while waiting, other stuff are still happening
             socket_util.await_start_mcast(self.sock)
             
@@ -351,13 +351,13 @@ server.
 
         if self.num_workers > 1:
             sys.stdout.write('\r' + str(self.local_steps))
-            if self.local_steps % 100 == 0:
+            if self.local_steps % 10 == 0:
                 global var0
                 global var1
                 var1 = sess.run(self.local_network.var_list) # After training
                 if var0 != None:
                     var_diff = [a - b for (a,b) in zip(var1, var0)]
-                    var_diff_data = pickle.dumps(var_diff, -1)
+                    var_diff_data = pickle.dumps(var_diff, -1)  # size is 2352348 bytes
                     print('Sync weights')
                     self.msg_sent = socket_util.socket_send_data_chucks(self.sock, var_diff_data, self.mcast_destination, self.msg_sent)
                 var0 = sess.run(self.local_network.var_list) # A list of numpy array

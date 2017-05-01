@@ -24,7 +24,7 @@ class FastSaver(tf.train.Saver):
 
 def run(args):
     env = create_env(args.env_id, client_id=str(args.task), remotes=args.remotes)
-    trainer = A3C(env, args.task, args.visualise, args.num_workers, args.worker_id, args.verbose_lvl)
+    trainer = A3C(env, args.task, args.visualise, args.num_workers, args.worker_id)
 
     # Variable names that start with "local" are not saved in checkpoints.
     if use_tf12_api:
@@ -79,7 +79,6 @@ Setting up Tensorflow for data parallel work
     parser.add_argument('--task', default=0, type=int, help='Task index')
     parser.add_argument('--num-workers', default=1, type=int, help='Number of workers')
     parser.add_argument('-id', '--worker-id', type=int, help='My worker ID')
-    parser.add_argument('-vb', '--verbose-lvl', default=1, type=int, help='Level of verboseness')
     parser.add_argument('--log-dir', default="/tmp/pong", help='Log directory path')
     parser.add_argument('--env-id', default="PongDeterministic-v3", help='Environment id')
     parser.add_argument('-r', '--remotes', default=None,
