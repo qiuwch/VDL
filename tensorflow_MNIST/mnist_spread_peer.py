@@ -116,7 +116,7 @@ def train(sess, mnist, mbox, send_MSG, rcv_MSG, group_list, num_peers, my_peer_I
   inc_msg_q = Queue.Queue()
   ret_val = Queue.Queue()
   msg_sent = 0
-  spread_listen_thread = spread_util.SpreadListenThread(mbox, rcv_MSG, group_list, inc_msg_q, ret_val) 
+  spread_listen_thread = spread_util.SpreadListenThread(mbox, rcv_MSG, group_list, num_peers, inc_msg_q, ret_val) 
   spread_listen_thread.start()
   
   
@@ -141,14 +141,14 @@ def train(sess, mnist, mbox, send_MSG, rcv_MSG, group_list, num_peers, my_peer_I
     # Send delta_W, delta_b to other peers
     deltas = delta_W, delta_b
     deltas_data = pickle.dumps(deltas, -1)
-    spread_util.send(mbox, send_MSG, deltas_data)
+    spread_util.send_chunks(mbox, send_MSG, deltas_data)
     msg_sent += 1
     
     # Handle each message in the socket queue
     # num_new_msg = inc_msg_q.qsize()
     while inc_msg_q.qsize() < num_peers - 1:
         if params.VERBOSE_LVL >= 3:
-            print ('WAIT ', num_rounds * (num_peers - 1), MSG_RCV, inc_msg_q.qsize())
+            pass #TODODO print ('WAIT ', num_rounds * (num_peers - 1), MSG_RCV, inc_msg_q.qsize())
         time.sleep(0.001)
         pass
     num_new_msg = num_peers - 1

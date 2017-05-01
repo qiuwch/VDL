@@ -1,4 +1,4 @@
-## SOCK_TIMEOUT_VAL, CHUCK_SEND_INTERVAL = 0.05, 0.002
+## SOCK_TIMEOUT_VAL, CHUNK_SEND_INTERVAL = 0.05, 0.002
 $ python mnist_mcast_peer.py 2 1 100 50
 Accuracy:  0.8641
 Train time:  4.18626189232 ; Test time:  0.0342381000519
@@ -71,14 +71,14 @@ Accuracy:  0.7324
 Train time:  5.75843787193 ; Test time:  0.0357241630554
 
 $ python mnist_spread_peer.py 4 1 100 250
-Accuracy:  0.887
-Train time:  114.10454011 ; Test time:  0.116909980774
+Accuracy:  0.9099
+Train time:  117.187964916 ; Test time:  0.132075071335
 $ python mnist_spread_peer.py 4 2 100 250
-Accuracy:  0.887
-Train time:  114.002291918 ; Test time:  0.10505604744
+Accuracy:  0.9099
+Train time:  117.1291852 ; Test time:  0.257256984711
 $ python mnist_spread_peer.py 4 3 100 250
-Accuracy:  0.887
-Train time:  114.056681871 ; Test time:  0.0915670394897
+Accuracy:  0.9099
+Train time:  117.205143929 ; Test time:  0.110887050629
 $ python mnist_spread_peer.py 4 4 100 250
-Accuracy:  0.887
-Train time:  114.103313923 ; Test time:  0.0848281383514
+Accuracy:  0.9099
+Train time:  117.135528088 ; Test time:  0.100905895233
