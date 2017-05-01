@@ -32,7 +32,7 @@ def main(_):
   Main function running a MNIST Tensorflow Spread peer program
   '''
   
-  num_peers, my_peer_ID, batch_size, num_rounds, verbose_lvl = parse_cmd_args()
+  num_peers, my_peer_ID, batch_size, num_rounds = parse_cmd_args()
   # Import data
   mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
 
@@ -44,7 +44,7 @@ def main(_):
   spread_util.await_start_spread(mbox, rcv_MSG, group_list)
   
   t0 = time.time()
-  msg_sent, rcv_msg_num = train(sess, mnist, mbox, send_MSG, rcv_MSG, group_list, num_peers, my_peer_ID, batch_size, num_rounds, tf_model_objects, verbose_lvl)
+  msg_sent, rcv_msg_num = train(sess, mnist, mbox, send_MSG, rcv_MSG, group_list, num_peers, my_peer_ID, batch_size, num_rounds, tf_model_objects)
   
   t1 = time.time()
   accuracy = test_model(sess, mnist, tf_model_objects)
@@ -56,15 +56,14 @@ def main(_):
 def parse_cmd_args():
   '''
   Parse command line arguments
-  @return (Number of peers, My peer ID, Batch size, Number of rounds per machine, Level of verboseness)
+  @return (Number of peers, My peer ID, Batch size, Number of rounds per machine)
   '''  
   num_peers = int(sys.argv[1])
   my_peer_ID = int(sys.argv[2]) - 1
   batch_size = int(sys.argv[3])
   num_rounds = int(sys.argv[4])
-  verbose_lvl = params.VERBOSE_LVL #TODO rm?
   
-  return (num_peers, my_peer_ID, batch_size, num_rounds, verbose_lvl)
+  return (num_peers, my_peer_ID, batch_size, num_rounds)
   
 def create_model():
   '''
@@ -95,7 +94,7 @@ def create_model():
   
   return (x, W, b, y, y_, train_step)
 
-def train(sess, mnist, mbox, send_MSG, rcv_MSG, group_list, num_peers, my_peer_ID, batch_size, num_rounds, tf_model_objects, verbose_lvl):
+def train(sess, mnist, mbox, send_MSG, rcv_MSG, group_list, num_peers, my_peer_ID, batch_size, num_rounds, tf_model_objects):
   '''
   Train the Tensorflow MNIST model
   @param sess               Tensorflow session
@@ -109,7 +108,6 @@ def train(sess, mnist, mbox, send_MSG, rcv_MSG, group_list, num_peers, my_peer_I
   @param batch_size         Batch size
   @param num_rounds         Number of rounds per machine
   @param tf_model_objects   Tensorflow model objects
-  @param verbose_lvl        Level of verboseness
   @return (Total number of messages sent, Total number of messages received from other peers)
   '''
   
@@ -118,7 +116,7 @@ def train(sess, mnist, mbox, send_MSG, rcv_MSG, group_list, num_peers, my_peer_I
   inc_msg_q = Queue.Queue()
   ret_val = Queue.Queue()
   msg_sent = 0
-  spread_listen_thread = spread_util.SpreadListenThread(mbox, rcv_MSG, group_list, inc_msg_q, ret_val, verbose_lvl) 
+  spread_listen_thread = spread_util.SpreadListenThread(mbox, rcv_MSG, group_list, inc_msg_q, ret_val) 
   spread_listen_thread.start()
   
   
@@ -147,14 +145,14 @@ def train(sess, mnist, mbox, send_MSG, rcv_MSG, group_list, num_peers, my_peer_I
     msg_sent += 1
     
     # Handle each message in the socket queue
-    num_new_msg = inc_msg_q.qsize()
-    # while inc_msg_q.qsize() < num_peers - 1:
-        # if verbose_lvl >= 3:
-            # print ('WAIT ', num_rounds * (num_peers - 1), MSG_RCV, inc_msg_q.qsize())
-        # time.sleep(0.001)
-        # pass
-    # num_new_msg = num_peers - 1:
-    if verbose_lvl >= 3:
+    # num_new_msg = inc_msg_q.qsize()
+    while inc_msg_q.qsize() < num_peers - 1:
+        if params.VERBOSE_LVL >= 3:
+            print ('WAIT ', num_rounds * (num_peers - 1), MSG_RCV, inc_msg_q.qsize())
+        time.sleep(0.001)
+        pass
+    num_new_msg = num_peers - 1
+    if params.VERBOSE_LVL >= 3:
         print(_, " Queue handle; num msg = ", num_new_msg)
     for _ in xrange(num_new_msg):
         # Process received delta_W, delta_b from other peers
@@ -168,21 +166,21 @@ def train(sess, mnist, mbox, send_MSG, rcv_MSG, group_list, num_peers, my_peer_I
     MSG_RCV += num_new_msg
   
   # Final handling; only needed for async mode
-  time.sleep(0.5)
-  num_new_msg = inc_msg_q.qsize()
-  if verbose_lvl >= 3:
-    print("final Queue handle; num msg = ", num_new_msg)
-  for _ in xrange(num_new_msg):
-    # Process received delta_W, delta_b from other peers
-    other_deltas_data = inc_msg_q.get(False)
-    other_deltas = pickle.loads(other_deltas_data)
-    other_delta_W, other_delta_b = other_deltas
+  # time.sleep(0.5)
+  # num_new_msg = inc_msg_q.qsize()
+  # if params.VERBOSE_LVL >= 3:
+    # print("final Queue handle; num msg = ", num_new_msg)
+  # for _ in xrange(num_new_msg):
+    # # Process received delta_W, delta_b from other peers
+    # other_deltas_data = inc_msg_q.get(False)
+    # other_deltas = pickle.loads(other_deltas_data)
+    # other_delta_W, other_delta_b = other_deltas
 
-    # Update own model based on delta_W, delta_b from other peers
-    W.assign(W + other_delta_W).eval()
-    b.assign(b + other_delta_b).eval()
+    # # Update own model based on delta_W, delta_b from other peers
+    # W.assign(W + other_delta_W).eval()
+    # b.assign(b + other_delta_b).eval()
 
-  if verbose_lvl >= 3:
+  if params.VERBOSE_LVL >= 3:
     print('Calling SpreadListenThread to terminate')
   spread_listen_thread.stop()
   rcv_msg_num = ret_val.get()

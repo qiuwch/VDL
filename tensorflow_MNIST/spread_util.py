@@ -20,7 +20,7 @@ class SpreadListenThread(threading.Thread):
     Thread class that listens for Spread message receiving. It terminates when stop() is called.
     """
 
-    def __init__(self, mbox, rcv_MSG, group_list, inc_msg_q, ret_val, verbose_lvl = 1):
+    def __init__(self, mbox, rcv_MSG, group_list, inc_msg_q, ret_val):
         super(SpreadListenThread, self).__init__()
         self.mbox = mbox
         self.rcv_MSG = rcv_MSG
@@ -28,7 +28,7 @@ class SpreadListenThread(threading.Thread):
         self.inc_msg_q = inc_msg_q
         self.ret_val = ret_val
         self.rcv_msg_num = 0
-        self.verbose_lvl = verbose_lvl
+        self.verbose_lvl = params.VERBOSE_LVL
         self._stop = threading.Event()
         self.daemon = True # Make the daemon = True, so that I can kill this program with ctrl-c
 
@@ -144,6 +144,7 @@ def recv(mbox, rcv_MSG, group_list, timeout_enabled):
     if timeout_enabled:
          timer.start()
     while mbox.poll() == 0:
+        time.sleep(params.SPREAD_MBOX_POLL_INTERVAL)
         if timeout_flag == 1:
             if params.VERBOSE_LVL >= 3:
                 print "Signal timeout!"
