@@ -257,14 +257,16 @@ should be computed.
 
         if self.num_workers > 1: # Only wait when we are using mutilple workers
             self.mbox, self.send_MSG, self.rcv_MSG, self.group_list = spread_util.set_up_spread_peer()
-            spread_listen_thread = spread_util.SpreadListenThread(self.mbox, self.rcv_MSG, self.group_list, self.inc_msg_q, self.ret_val)
+            spread_listen_thread = spread_util.SpreadListenThread(self.mbox, self.rcv_MSG, self.group_list, self.num_workers, self.inc_msg_q, self.ret_val)
             spread_util.await_start_spread(self.mbox, self.rcv_MSG, self.group_list)
             
 
     def start_listen_thread(self):
         if self.num_workers == 1:
             return
+        print("Panda fun") #TODODO rm
         if spread_listen_thread:
+            print("HUEHUEHUE") #TODODO rm
             spread_listen_thread.start()
                 
     def sync_initial_weights(self, sess, var_list):
@@ -274,13 +276,14 @@ should be computed.
         if self.worker_id == 0:
             print('Initial values of weights')
             var_init = sess.run(var_list) # After training
-            pprint(var_init) 
             var_init_data = pickle.dumps(var_init)
-            #TODODO rm import os 
-            #var_init_data = os.urandom(140000)
             # Debug:
-            print( sys.getsizeof(var_init_data) )  # ~6340000 byes
-            spread_util.send(self.mbox, self.send_MSG, params.INIT_WEIGHTS_TAG + var_init_data)
+            # print( sys.getsizeof(var_init_data) )  # ~6340000 byes
+            
+            # Wait for other workers to get ready
+            time.sleep(5)
+            pprint(var_init) 
+            spread_util.send_chunks(self.mbox, self.send_MSG, params.INIT_WEIGHTS_TAG + var_init_data)
         else:
             print('Wait initial weights')
             while self.inc_msg_q.empty():
@@ -357,8 +360,8 @@ server.
                     var_diff_data = pickle.dumps(var_diff, -1)  # size is 2352348 bytes 
                     print('Sync weights')
                     # Debug:
-                    print( sys.getsizeof(var_diff_data) )
-                    spread_util.send(self.mbox, self.send_MSG, var_diff_data)
+                    # print( sys.getsizeof(var_diff_data) )
+                    spread_util.send_chunks(self.mbox, self.send_MSG, var_diff_data)
                 var0 = sess.run(self.local_network.var_list) # A list of numpy array
 
             # Handle each message in the socket queue
