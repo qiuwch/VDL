@@ -24,9 +24,17 @@ class FastSaver(tf.train.Saver):
                                     meta_graph_suffix, False)
 
 def run(args):
-    env = create_env(args.env_id, client_id=str(args.task), remotes=args.remotes)
-    trainer = a3c.A3C(env, args.task, args.visualise, args.num_workers, args.verbose_lvl, args.port, args.num_actors)
+    if args.env_id == 'PongDeterministic-v3':
+        envid = 'Pong'
+    elif args.env_id == 'flashgames.NeonRace-v0':
+        envid = 'Neon'    
 
+    if args.num_actors == 0:
+        env = create_env(args.env_id, client_id=str(args.task), remotes=args.remotes)
+        trainer = a3c.A3C(env, args.task, args.visualise, args.num_workers, args.verbose_lvl, args.port, args.num_actors, envid)
+    else:
+        trainer = a3c.A3C(0, args.task, args.visualise, args.num_workers, args.verbose_lvl, args.port, args.num_actors, envid)
+ 
     # Variable names that start with "local" are not saved in checkpoints.
     if use_tf12_api:
         variables_to_save = [v for v in tf.global_variables() if not v.name.startswith("local")]
@@ -91,7 +99,7 @@ Setting up Tensorflow for data parallel work
                         help="Visualise the gym environment by running env.render() between each timestep")
 
     parser.add_argument('--port', type=int, default=10000)
-    parser.add_argument('--num_actors', type=int, default=1)
+    parser.add_argument('--num_actors', type=int, default=0)
 
     args = parser.parse_args()
     run(args)
