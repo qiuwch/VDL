@@ -31,9 +31,9 @@ def run(args):
 
     if args.num_actors == 0:
         env = create_env(args.env_id, client_id=str(args.task), remotes=args.remotes)
-        trainer = a3c.A3C(env, args.task, args.visualise, args.num_workers, args.verbose_lvl, args.port, args.num_actors, envid)
+        trainer = a3c.A3C(env, args.task, args.visualise, args.num_workers, args.worker_id, args.port, args.num_actors, envid)
     else:
-        trainer = a3c.A3C(0, args.task, args.visualise, args.num_workers, args.verbose_lvl, args.port, args.num_actors, envid)
+        trainer = a3c.A3C(0, args.task, args.visualise, args.num_workers, args.port, args.num_actors, envid)
  
     # Variable names that start with "local" are not saved in checkpoints.
     if use_tf12_api:

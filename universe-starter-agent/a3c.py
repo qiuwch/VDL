@@ -315,7 +315,7 @@ runner appends the policy to the queue.
 var0 = None  # TODO: Change these two to local variables
 var1 = None
 class A3C(object):
-    def __init__(self, env, task, visualise, num_workers, worker_id):
+    def __init__(self, env, task, visualise, num_workers, worker_id, port, num_actors, env_id):
         """
 An implementation of the A3C algorithm that is reasonably well-tuned for the VNC environments.
 Below, we will have a modest amount of complexity due to the way TensorFlow handles data parallelism.
