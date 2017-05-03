@@ -246,7 +246,7 @@ should be computed.
             # on the one hand;  but on the other hand, we get less frequent parameter updates, which
             # slows down learning.  In this code, we found that making local steps be much
             # smaller than 20 makes the algorithm more difficult to tune and to get to work.
-            self.runner = RunnerThread(env, pi, 20, visualise)
+            self.runner = RunnerThread(env, pi, 20, visualise, port, num_actors, conf)
 
 
             grads = tf.gradients(self.loss, pi.var_list)
