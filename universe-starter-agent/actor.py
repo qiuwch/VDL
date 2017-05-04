@@ -14,7 +14,7 @@ def log(msg):
     pass
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--server_ip', default='10.161.48.43')
+parser.add_argument('--server_ip')
 parser.add_argument('--port', type=int, default=10000)
 parser.add_argument('--env-id', default="PongDeterministic-v3", help='Environment id')
 parser.add_argument('--compress', action='store_true')

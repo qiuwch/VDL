@@ -8,7 +8,7 @@ import sys, signal
 import time
 import os
 #from a3c import A3C
-import a3c
+import ps_a3c as a3c
 from envs import create_env
 import distutils.version
 import ccvl_cluster_spec
@@ -16,6 +16,8 @@ use_tf12_api = distutils.version.LooseVersion(tf.VERSION) >= distutils.version.L
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+fh = logging.FileHandler('debug.log')
+logger.addHandler(fh)
 
 # Disables write_meta_graph argument, which freezes entire process and is mostly useless.
 class FastSaver(tf.train.Saver):
@@ -25,9 +27,21 @@ class FastSaver(tf.train.Saver):
                                     meta_graph_suffix, False)
 
 def run(args, server):
-    env = create_env(args.env_id, client_id=str(args.task), remotes=args.remotes)
-    trainer = a3c.A3C(env, args.task, args.visualise, args.num_workers, args.verbose_lvl, args.port, args.num_actors)
+    if args.env_id == 'PongDeterministic-v3':
+        envid = 'Pong'
+    elif args.env_id == 'flashgames.NeonRace-v0':
+        envid = 'Neon'    
+    else:
+        raise Exception("Unknown environment id %s" % args.env_id)
 
+    logger.info('Start environment %s with id %s' % (args.env_id, envid))
+
+    if args.num_actors == 0:
+        env = create_env(args.env_id, client_id=str(args.task), remotes=args.remotes)
+        trainer = a3c.A3C(env, args.task, args.visualise, args.num_workers, args.verbose_lvl, args.port, args.num_actors, envid)
+    else:
+        trainer = a3c.A3C(0, args.task, args.visualise, args.num_workers, args.verbose_lvl, args.port, args.num_actors, envid)
+        
     # Variable names that start with "local" are not saved in checkpoints.
     if use_tf12_api:
         variables_to_save = [v for v in tf.global_variables() if not v.name.startswith("local")]
@@ -106,8 +120,8 @@ Setting up Tensorflow for data parallel work
     parser.add_argument('--job-name', default="worker", help='worker or ps')
     parser.add_argument('--num-workers', default=1, type=int, help='Number of workers')
     parser.add_argument('-vb', '--verbose-lvl', default=1, type=int, help='Level of verboseness')
-    parser.add_argument('--log-dir', default="/tmp/pong", help='Log directory path')
-    parser.add_argument('--env-id', default="PongDeterministic-v3", help='Environment id')
+    parser.add_argument('--log-dir', help='Log directory path')
+    parser.add_argument('--env-id', help='Environment id')
     parser.add_argument('-r', '--remotes', default=None,
                         help='References to environments to create (e.g. -r 20), '
                              'or the address of pre-existing VNC servers and '

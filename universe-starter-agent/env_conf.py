@@ -13,6 +13,7 @@ pong_conf = dict(
 )
 
 def get(env_name):
+    assert env_name == 'Neon'
     confs = dict(
         Pong = pong_conf,
         Neon = neoncar_conf,

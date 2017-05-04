@@ -8,7 +8,7 @@ import sys, signal
 import time
 import os
 #from a3c import A3C
-import a3c
+import ps_a3c as a3c
 from envs import create_env
 import distutils.version
 use_tf12_api = distutils.version.LooseVersion(tf.VERSION) >= distutils.version.LooseVersion('0.12.0')

@@ -13,6 +13,8 @@ import time
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 universe.configure_logging()
+fh = logging.FileHandler('debug.log')
+logger.addHandler(fh)
 
 def create_env(env_id, client_id, remotes, **kwargs):
     spec = gym.spec(env_id)
@@ -27,6 +29,7 @@ def create_env(env_id, client_id, remotes, **kwargs):
         return create_atari_env(env_id)
 
 def create_flash_env(env_id, client_id, remotes, **_):
+    assert(env_id != None)
     env = gym.make(env_id)
     env = Vision(env)
     env = Logger(env)
@@ -39,6 +42,7 @@ def create_flash_env(env_id, client_id, remotes, **_):
     env = FlashRescale(env)
 
     keys = ['left', 'right', 'up', 'down', 'x']
+    assert env_id == 'flashgames.NeonRace-v0'
     if env_id == 'flashgames.NeonRace-v0':
         # Better key space for this game.
         keys = ['left', 'right', 'up', 'left up', 'right up', 'down', 'up x']

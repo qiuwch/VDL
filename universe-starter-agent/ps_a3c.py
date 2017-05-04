@@ -12,7 +12,119 @@ import struct
 import Queue
 use_tf12_api = distutils.version.LooseVersion(tf.VERSION) >= distutils.version.LooseVersion('0.12.0')
 import env_conf
-from actor_util import SocketRecvThread
+
+import logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+fh = logging.FileHandler('debug.log')
+logger.addHandler(fh)
+
+class SocketRecvThread(threading.Thread):
+    def __init__(self, connection_socket, policy, num_local_steps, summary_writer, render, global_rollout, sess, conf):
+#        super(SocketRecvThread, self).__init__()
+        threading.Thread.__init__(self)
+        self.connection_socket = connection_socket
+        self.policy = policy
+        self.num_local_steps = num_local_steps
+        self.summary_writer = summary_writer
+        self.render = render
+        self.global_rollout = global_rollout
+        self.buffer_size = 1400
+        self.daemon = True
+        self.sess = sess
+        self.conf = conf
+#        print ('55555')
+
+    def _frag_recv(self, mess_len):
+        mess_remain = mess_len
+        mess = ''
+        while mess_remain > 0:
+            mess_temp = self.connection_socket.recv(min(mess_remain, self.buffer_size))
+            mess += mess_temp
+            mess_remain -= len(mess_temp)
+        return mess
+
+    def run(self):
+        with self.sess.as_default():
+            self._run()
+
+    def _run(self):
+#        print ('66666')
+        #last_state = self.env.reset()
+        raw_message_len = self.connection_socket.recv(4)
+        if raw_message_len:
+            message_len = struct.unpack('I', raw_message_len)[0]
+            message = self._frag_recv(message_len)
+            recovered_message = pickle.loads(message)
+        last_state = recovered_message['obs']
+
+        last_features = self.policy.get_initial_features()
+        length = 0
+        rewards = 0
+
+        while True:
+            terminal_end = False
+            rollout = PartialRollout()
+
+            for _ in range(self.num_local_steps):
+                #print ('aaaaa')
+                fetched = self.policy.act(last_state, *last_features)
+                action, value_, features = fetched[0], fetched[1], fetched[2:]
+                # argmax to convert from one-hot
+                #state, reward, terminal, info = env.step(action.argmax())
+                #print ('88888')
+                #print (fetched)
+                #print (action.argmax())
+                self.connection_socket.send(struct.pack('I', action.argmax()))
+
+                if self.render:
+                    self.env.render()
+
+                # collect the experience
+                raw_message_len = self.connection_socket.recv(4)
+                if raw_message_len:
+                    message_len = struct.unpack('I', raw_message_len)[0]
+                    message = self._frag_recv(message_len)
+                    recovered_message = pickle.loads(message)
+
+#                print (recovered_message)
+
+                rollout.add(last_state, action, recovered_message['reward'], value_, recovered_message['terminal'], last_features)
+                length += 1
+                rewards += recovered_message['reward']
+
+                last_state = recovered_message['obs']
+                last_features = features
+
+                if recovered_message['info']:
+                    summary = tf.Summary()
+                    for k, v in recovered_message['info'].items():
+                        summary.value.add(tag=k, simple_value=float(v))
+                    self.summary_writer.add_summary(summary, self.policy.global_step.eval())
+                    self.summary_writer.flush()
+
+                timestep_limit = self.conf['timestep_limit']
+                if recovered_message['terminal'] or length >= timestep_limit:
+                    terminal_end = True
+                    if length >= timestep_limit or not self.conf['autoreset']:
+                        #last_state = self.env.reset()
+                        self.connection_socket.send('rest')
+                        raw_message_len = self.connection_socket.recv(4)
+                        if raw_message_len:
+                            message_len = struct.unpack('I', raw_message_len)[0]
+                            message = self._frag_recv(message_len)
+                            recovered_message = pickle.loads(message)
+                        last_state = recovered_message['obs']
+                    last_features = self.policy.get_initial_features()
+                    print("Episode finished. Sum of rewards: %d. Length: %d" % (rewards, length))
+                    length = 0
+                    rewards = 0
+                    break
+
+            if not terminal_end:
+                rollout.r = self.policy.value(last_state, *last_features)
+
+            self.global_rollout[0] = rollout
 
 def discount(x, gamma):
     return scipy.signal.lfilter([1], [1, -gamma], x[::-1], axis=0)[::-1]
@@ -181,6 +293,7 @@ runner appends the policy to the queue.
         recv_threads = []
         for i in range(0, num_actors):
             connection_socket, addr = server_socket.accept()
+            print('Client %d connected from %s' % (i, addr))
             client_addrs.append(addr)
             recv_thread = SocketRecvThread(connection_socket, policy, num_local_steps, summary_writer, render, Global, tf.get_default_session(), conf)
             recv_threads.append(recv_thread)
@@ -209,19 +322,24 @@ should be computed.
         self.task = task
         self.env_id = env_id
         conf = env_conf.get(self.env_id)
+        logger.info(conf)
         worker_device = "/job:worker/task:{}/cpu:0".format(task)
+
+        observation_space_shape = conf['observation_space_shape']
+        action_space_n = conf['action_space_n']
+
         with tf.device(tf.train.replica_device_setter(1, worker_device=worker_device)):
             with tf.variable_scope("global"):
-                self.network = LSTMPolicy(env.observation_space.shape, env.action_space.n)
+                self.network = LSTMPolicy(observation_space_shape, action_space_n)
                 self.global_step = tf.get_variable("global_step", [], tf.int32, initializer=tf.constant_initializer(0, dtype=tf.int32),
                                                    trainable=False)
 
         with tf.device(worker_device):
             with tf.variable_scope("local"):
-                self.local_network = pi = LSTMPolicy(env.observation_space.shape, env.action_space.n)
+                self.local_network = pi = LSTMPolicy(observation_space_shape, action_space_n)
                 pi.global_step = self.global_step
 
-            self.ac = tf.placeholder(tf.float32, [None, env.action_space.n], name="ac")
+            self.ac = tf.placeholder(tf.float32, [None, action_space_n], name="ac")
             self.adv = tf.placeholder(tf.float32, [None], name="adv")
             self.r = tf.placeholder(tf.float32, [None], name="r")
 
