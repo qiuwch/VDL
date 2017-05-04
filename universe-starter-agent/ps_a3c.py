@@ -12,6 +12,7 @@ import struct
 import Queue
 use_tf12_api = distutils.version.LooseVersion(tf.VERSION) >= distutils.version.LooseVersion('0.12.0')
 import env_conf
+import pickle
 
 import logging
 logger = logging.getLogger(__name__)
@@ -287,6 +288,7 @@ runner appends the policy to the queue.
         server_port = port
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket.bind(('', server_port))
+        print('Waiting for clients.')
         server_socket.listen(5)
 
         client_addrs = []
