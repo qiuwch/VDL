@@ -8,7 +8,7 @@ Welcome to VDL's documentation!
 
 This documentation documents how to reproduce the result in the VDL project.
 
-.. figure:: /_static/architecture.png
+.. figure:: /img/architecture.png
     :width: 500px
     :align: center
 

@@ -11,10 +11,10 @@ A compiled virtual arm binary can be downloaded.
 
 The screenshot of the virtual arm
 
-.. figure:: _static/VirtualArm.png
+.. figure:: /img/VirtualArm.png
 
 The arm is placed in an empty environment. If you want to place the arm to a different virtual environment. The access to the source project is required.
 
 This virutal arm can be controlled with the `unrealcv project <http://unrealcv.org>`__.
 
-.. figure:: _static/UE4VirtualArm.png
+.. figure:: /img/UE4VirtualArm.png
