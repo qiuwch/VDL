@@ -1,3 +1,0 @@
-[submodule "arm-pose/data"]
-	path = arm-pose/data
-	url = https://github.com/qiuwch/DataVArm.git
