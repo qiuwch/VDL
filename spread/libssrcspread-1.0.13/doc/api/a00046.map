@@ -1,0 +1,11 @@
+<map id="MembershipInfo.h" name="MembershipInfo.h">
+<area shape="rect" id="node2" href="$a00047.html" title="This header defines the Message class. " alt="" coords="139,80,230,107"/>
+<area shape="rect" id="node10" href="$a00026.html" title="BaseMessage.cc" alt="" coords="255,80,384,107"/>
+<area shape="rect" id="node3" href="$a00053.html" title="This header defines the ScatterMessage class. " alt="" coords="117,155,253,181"/>
+<area shape="rect" id="node4" href="$a00041.html" title="This header defines the Mailbox class. " alt="" coords="76,229,157,256"/>
+<area shape="rect" id="node9" href="$a00050.html" title="ScatterMessage.cc" alt="" coords="181,229,324,256"/>
+<area shape="rect" id="node5" href="$a00056.html" title="This header includes all of the Spread toolkit wrapper classes from the ssrc::spread namespace..." alt="" coords="25,304,102,331"/>
+<area shape="rect" id="node8" href="$a00038.html" title="Mailbox.cc" alt="" coords="127,304,213,331"/>
+<area shape="rect" id="node6" href="$a00023.html" title="This header includes all of the library headers. " alt="" coords="5,379,121,405"/>
+<area shape="rect" id="node7" href="$a00014.html" title="This header contains documentation only and is not part of the actual source code. " alt="" coords="30,453,97,480"/>
+</map>
