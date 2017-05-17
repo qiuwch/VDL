@@ -1,0 +1,84 @@
+## SOCK_TIMEOUT_VAL, CHUNK_SEND_INTERVAL = 0.05, 0.002
+$ python mnist_mcast_peer.py 2 1 100 50
+Accuracy:  0.8641
+Train time:  4.18626189232 ; Test time:  0.0342381000519
+$ python mnist_mcast_peer.py 2 2 100 50
+Accuracy:  0.8606
+Train time:  4.1673989296 ; Test time:  0.0271999835968
+
+$ python mnist_mcast_peer.py 2 1 100 500
+Accuracy:  0.9069
+Train time:  113.962535858 ; Test time:  0.267920017242
+$ python mnist_mcast_peer.py 2 2 100 500
+Accuracy:  0.9189
+Train time:  28.4919300079 ; Test time:  0.051216840744
+
+$ python mnist_mcast_peer.py 4 1 100 25
+Accuracy:  0.6864
+Train time:  3.20648789406 ; Test time:  0.0348379611969
+$ python mnist_mcast_peer.py 4 2 100 25
+Accuracy:  0.7775
+Train time:  3.20766186714 ; Test time:  0.0274350643158
+$ python mnist_mcast_peer.py 4 3 100 25
+Accuracy:  0.6525
+Train time:  2.99776887894 ; Test time:  0.0252680778503
+$ python mnist_mcast_peer.py 4 4 100 25
+Accuracy:  0.7294
+Train time:  3.19048690796 ; Test time:  0.0270938873291
+
+# Only Peer 1 is likely to crash
+$ python mnist_mcast_peer.py 4 1 100 250
+  File "mnist_mcast_peer.py", line 149, in train
+    other_deltas = pickle.loads(other_deltas_data)
+EOFError
+$ python mnist_mcast_peer.py 4 2 100 250
+Accuracy:  0.8902
+Train time:  30.0670151711 ; Test time:  0.050440788269
+$ python mnist_mcast_peer.py 4 3 100 250
+Accuracy:  0.9099
+Train time:  23.2497611046 ; Test time:  0.063581943512
+$ python mnist_mcast_peer.py 4 4 100 250
+Accuracy:  0.9148
+Train time:  41.2756619453 ; Test time:  0.0808420181274
+
+
+
+$ python mnist_spread_peer.py 2 1 100 50
+Accuracy:  0.8752
+Train time:  4.5957698822 ; Test time:  0.039314031601
+$ python mnist_spread_peer.py 2 2 100 50
+Accuracy:  0.8752
+Train time:  4.61064291 ; Test time:  0.0244169235229
+
+$ python mnist_spread_peer.py 2 1 100 500
+Accuracy:  0.9177
+Train time:  74.2826220989 ; Test time:  0.0836029052734
+$ python mnist_spread_peer.py 2 2 100 500
+Accuracy:  0.9177
+Train time:  74.3231728077 ; Test time:  0.0720322132111
+
+$ python mnist_spread_peer.py 4 1 100 25
+Accuracy:  0.7324
+Train time:  5.76025295258 ; Test time:  0.028116941452
+$ python mnist_spread_peer.py 4 2 100 25
+Accuracy:  0.7324
+Train time:  5.73203420639 ; Test time:  0.0338759422302
+$ python mnist_spread_peer.py 4 3 100 25
+Accuracy:  0.7324
+Train time:  5.73166298866 ; Test time:  0.0302700996399
+$ python mnist_spread_peer.py 4 4 100 25
+Accuracy:  0.7324
+Train time:  5.75843787193 ; Test time:  0.0357241630554
+
+$ python mnist_spread_peer.py 4 1 100 250
+Accuracy:  0.9099
+Train time:  117.187964916 ; Test time:  0.132075071335
+$ python mnist_spread_peer.py 4 2 100 250
+Accuracy:  0.9099
+Train time:  117.1291852 ; Test time:  0.257256984711
+$ python mnist_spread_peer.py 4 3 100 250
+Accuracy:  0.9099
+Train time:  117.205143929 ; Test time:  0.110887050629
+$ python mnist_spread_peer.py 4 4 100 250
+Accuracy:  0.9099
+Train time:  117.135528088 ; Test time:  0.100905895233

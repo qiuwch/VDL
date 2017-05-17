@@ -16,7 +16,7 @@ class SockListenThread(threading.Thread):
     Thread class that listens for socket message receiving. It terminates when stop() is called.
     """
 
-    def __init__(self, sock, self_IP, inc_msg_q, num_peers, ret_val, verbose_lvl = 1):
+    def __init__(self, sock, self_IP, inc_msg_q, num_peers, ret_val):
         super(SockListenThread, self).__init__()
         self.sock = sock
         self.self_IP = self_IP
@@ -24,20 +24,20 @@ class SockListenThread(threading.Thread):
         self.num_peers = num_peers
         self.ret_val = ret_val
         self.rcv_msg_num = 0
-        self.verbose_lvl = verbose_lvl
+        self.params.VERBOSE_LVL = params.VERBOSE_LVL
         self._stop = threading.Event()
         self.daemon = True # Make the daemon = True, so that I can kill this program with ctrl-c
 
     def run(self):
         while not self.stopped():
-            if self.verbose_lvl >= 3:
+            if self.params.VERBOSE_LVL >= 3:
                 print "Entering recv cycle..."
-            self.rcv_msg_num = socket_recv_chucked_data(self.sock, self.self_IP, self.inc_msg_q, self.num_peers, self.rcv_msg_num, self.verbose_lvl)
+            self.rcv_msg_num = socket_recv_chucked_data(self.sock, self.self_IP, self.inc_msg_q, self.num_peers, self.rcv_msg_num, self.params.VERBOSE_LVL)
         # thread terminating
         time.sleep(1)
-        if self.verbose_lvl >= 3:
+        if self.params.VERBOSE_LVL >= 3:
             print "Entering final recv cycle..."
-        self.rcv_msg_num = socket_recv_chucked_data(self.sock, self.self_IP, self.inc_msg_q, self.num_peers, self.rcv_msg_num, self.verbose_lvl)
+        self.rcv_msg_num = socket_recv_chucked_data(self.sock, self.self_IP, self.inc_msg_q, self.num_peers, self.rcv_msg_num, self.params.VERBOSE_LVL)
         self.ret_val.put(self.rcv_msg_num)
     
     def stop(self):
@@ -87,17 +87,35 @@ def close_UDP_mcast_peer(sock):
     '''
     sock.close()
 
-
+def await_signal(sock, content, timeout_val):
+    '''
+    Blocks and waits for a specific signal packet, which might contain payload data
+    @param sock The socket to use
+    @param content Content of the signal
+    @param timeout_val Timeout value for waiting for the signal, or None if no timeout
+    @param The received signal packet, or None if timed out
+    '''
+    print('Waiting for signal ' + content + '...')
+    try:
+        sock.settimeout(timeout_val)
+        signal = sock.recvfrom(len(content))[0]
+    except socket.timeout:
+        if params.VERBOSE_LVL >= 2:
+            print('await signal ' + content + ' timed out')
+        return None
+    
+    sock.settimeout(None)
+    assert(signal[:len(content)] == content)
+    print('Signal received.')
+    return signal
+    
+    
 def await_start_mcast(sock):
     '''
     Blocks and waits for start_mcast signal
-    @params sock The socket to use
+    @param sock The socket to use
     '''
-    
-    print('Waiting for start_mcast signal...')
-    signal = sock.recvfrom(params.LEN_START_MCAST_SIGNAL)[0]
-    assert (signal == params.START_MCAST_SIGNAL)
-    print('Signal received.')
+    await_signal(sock, params.START_MCAST_SIGNAL, None)
     
 
 def socket_send_data_chucks(sock, data, mcast_destination, msg_sent):
@@ -111,17 +129,18 @@ def socket_send_data_chucks(sock, data, mcast_destination, msg_sent):
     '''
     
     # Send tag "Arnold" followed by data length
-    sock.sendto(params.IMAGE_SIZE_PACKET_TAG + str(len(data)), mcast_destination)
+    sock.sendto(params.PACKET_SIZE_TAG + str(len(data)), mcast_destination)
     msg_sent += 1
     
     for i in xrange(0, sys.getsizeof(data), params.MAX_PACKET_SIZE):
+        time.sleep(params.CHUNK_SEND_INTERVAL)
         data_chuck = data[i : i + params.MAX_PACKET_SIZE]
         sock.sendto(data_chuck, mcast_destination)
         msg_sent += 1
 
     return msg_sent
 
-def socket_recv_chucked_data(sock, self_IP, queue, num_peers, rcv_msg_num, verbose_lvl = 1):
+def socket_recv_chucked_data(sock, self_IP, queue, num_peers, rcv_msg_num, params.VERBOSE_LVL = 1):
     '''
     Let the socket receive chucked data with a given total length. Retry receiving if packets
     are incomplete, but return null if timeout. Ignore packets sent by self
@@ -130,7 +149,7 @@ def socket_recv_chucked_data(sock, self_IP, queue, num_peers, rcv_msg_num, verbo
     @param queue The queue to store the original data
     @param num_peers Number of mulitcast peers
     @param rcv_msg_num Total number of messages received from other peers before this call
-    @param verbose_lvl The level of verboseness (extent of debug messages)
+    @param params.VERBOSE_LVL The level of verboseness (extent of debug messages)
     @return Total number of messages received from other peers after this call
     '''
     
@@ -144,40 +163,40 @@ def socket_recv_chucked_data(sock, self_IP, queue, num_peers, rcv_msg_num, verbo
             msg, (addr, port) = sock.recvfrom(params.MAX_PACKET_SIZE)
             rcv_msg_num += 1
             if addr == self_IP:
-                #TODO re rcv_msg_num -= 1
+                rcv_msg_num -= 1
                 continue
             elif addr not in addr_dict  or  addr_dict[addr][0] == 0:
                 # if no "Arnold":
-                if msg[0 : params.LEN_IMAGE_SIZE_PACKET_TAG] != params.IMAGE_SIZE_PACKET_TAG:
-                    if verbose_lvl >= 2:
+                if msg[0 : params.LEN_PACKET_SIZE_TAG] != params.PACKET_SIZE_TAG:
+                    if params.VERBOSE_LVL >= 2:
                         print('Warning: received fragment without head fragment')
                     continue
                 else:
-                    data_len = int(msg[params.LEN_IMAGE_SIZE_PACKET_TAG :])
+                    data_len = int(msg[params.LEN_PACKET_SIZE_TAG :])
                     addr_dict[addr] = [data_len, '']
-                    if verbose_lvl >= 2:
+                    if params.VERBOSE_LVL >= 2:
                         print('received head fragment')
             else:
                 # if "Arnold":
-                if msg[0 : params.LEN_IMAGE_SIZE_PACKET_TAG] == params.IMAGE_SIZE_PACKET_TAG:
-                    data_len = int(msg[params.LEN_IMAGE_SIZE_PACKET_TAG :])
+                if msg[0 : params.LEN_PACKET_SIZE_TAG] == params.PACKET_SIZE_TAG:
+                    data_len = int(msg[params.LEN_PACKET_SIZE_TAG :])
                     addr_dict[addr] = [data_len, '']
-                    if verbose_lvl >= 2:
+                    if params.VERBOSE_LVL >= 2:
                         print('Warning: Received head fragment without completing previous packet')
                 else:
                     addr_dict[addr][0] -= len(msg)
                     addr_dict[addr][1] += msg
-                    if verbose_lvl >= 2:
+                    if params.VERBOSE_LVL >= 2:
                         sys.stdout.write('.')
                     if addr_dict[addr][0] == 0:
                         queue.put(addr_dict[addr][1])
-                        print(addr_dict[addr][1][:3]) #TODODO rm
                         queue_cnt += 1
                         addr_dict[addr] = [0, '']
-                        if verbose_lvl >= 2:
+                        if params.VERBOSE_LVL >= 2:
                             print('Full packet received; adding to queue')
     except socket.timeout:
-        if verbose_lvl >= 1:
+        if params.VERBOSE_LVL >= 2:
             print('socket_recv_chucked_data timed out')
+        return rcv_msg_num
     
     return rcv_msg_num
