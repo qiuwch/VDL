@@ -7,7 +7,9 @@
 Welcome to VDL's documentation!
 ===============================
 
-This documentation documents how to reproduce the result in the VDL project.
+This documentation documents how to reproduce the result in the VDL project. The most update-to-date version can be found in the `VDL github repository <https://github.com/qiuwch/VDL.git>`__
+
+The final presentation is hosted `here <https://docs.google.com/presentation/d/1r4zVv6bnImt8xTVtxopYhg1lWAeXrgliMfQQTo5Nlng/edit?usp=sharing>`__. The pdf version can be downloaded from :download:`here <_static/final_presentation.pdf>`
 
 .. figure:: /img/architecture.png
     :width: 500px
@@ -15,7 +17,17 @@ This documentation documents how to reproduce the result in the VDL project.
 
     The architecture with multiple learners and multiple actors
 
-The final presentation is hosted `here <https://docs.google.com/presentation/d/1r4zVv6bnImt8xTVtxopYhg1lWAeXrgliMfQQTo5Nlng/edit?usp=sharing>`__
+This project implements the distributed learning system as shown in the above figure. How to run and benchmark each component and how to run the complete system are documented in the following sections.
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+   multi_learner
+   VDL
+   virtual_arm
+
+
 
 Files in this project
 =====================
@@ -44,11 +56,3 @@ Files in this project
     arm-pose/               # Pose estimation code trained on the virtual arm
     # and test on the real arm.
     owi-arm/                # Code to control real and the virtual arm
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
-
-   multi_learner
-   VDL
-   virtual_arm
