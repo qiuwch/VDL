@@ -1,0 +1,303 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Run 5 learners and 10 actors in a cluster &mdash; VDL  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="VDL  documentation" href="index.html"/>
+        <link rel="next" title="The virtual robot arm" href="virtual_arm.html"/>
+        <link rel="prev" title="Multiple learners component" href="multi_learner.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> VDL
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="multi_learner.html">Multiple learners component</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Run 5 learners and 10 actors in a cluster</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#install-dependencies-for-the-code">Install dependencies for the code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#modify-the-cluster-configuration">Modify the cluster configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#start-the-parameter-server">Start the parameter server</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#start-five-learners">Start five learners</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#start-all-actors-and-start-learning">Start all actors and start learning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#check-the-learning-result">Check the learning result</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_arm.html">The virtual robot arm</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">VDL</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Run 5 learners and 10 actors in a cluster</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/VDL.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="run-5-learners-and-10-actors-in-a-cluster">
+<h1>Run 5 learners and 10 actors in a cluster<a class="headerlink" href="#run-5-learners-and-10-actors-in-a-cluster" title="Permalink to this headline">¶</a></h1>
+<p>The setup and execution is a complex procedure. If not clear, please report an issue in <a class="reference external" href="https://github.com/qiuwch/VDL/issues">the issue tracker</a></p>
+<div class="section" id="install-dependencies-for-the-code">
+<h2>Install dependencies for the code<a class="headerlink" href="#install-dependencies-for-the-code" title="Permalink to this headline">¶</a></h2>
+<p>The complete system requires several dependencies. The dependencies are:</p>
+<ul class="simple">
+<li>docker</li>
+<li><dl class="first docutils">
+<dt>python libraries</dt>
+<dd><ul class="first last">
+<li><a class="reference external" href="http://gym.openai.com">OpenAI gym</a></li>
+<li><a class="reference external" href="http://universe.openai.com">OpenAI universe</a></li>
+<li><a class="reference external" href="http://tensorflow.org">Tensorflow</a></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li>The learning code for neonrace is modified from <a class="reference external" href="https://github.com/openai/universe-starter-agent">openai/universe-starter-agent</a></li>
+</ul>
+<p>An installation script is provided in <code class="code docutils literal"><span class="pre">universe-starter-agent/install/install.sh</span></code></p>
+</div>
+<div class="section" id="modify-the-cluster-configuration">
+<h2>Modify the cluster configuration<a class="headerlink" href="#modify-the-cluster-configuration" title="Permalink to this headline">¶</a></h2>
+<p>The multiple-learner component is implemented with <a class="reference external" href="https://www.tensorflow.org/deploy/distributed">distributed tensorflow</a>.</p>
+<p>The learner configuration is hard coded in <code class="code docutils literal"><span class="pre">universe-starter-agent/ccvl_cluster_spec.py</span></code>. Modify this file according to your cluster spec.</p>
+<p>In the following document, the parameter server will be <code class="code docutils literal"><span class="pre">ccvl2</span></code>. And the other five machines <code class="code docutils literal"><span class="pre">ccvl1-5</span></code> will run learners. The parameter server is responsible for coordinating weights between learners.</p>
+</div>
+<div class="section" id="start-the-parameter-server">
+<h2>Start the parameter server<a class="headerlink" href="#start-the-parameter-server" title="Permalink to this headline">¶</a></h2>
+<p>In the machine for parameter server, <code class="code docutils literal"><span class="pre">ccvl2</span></code>, start the parameter server with</p>
+<div class="code highlight-default"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="n">universe</span><span class="o">-</span><span class="n">starter</span><span class="o">-</span><span class="n">agent</span><span class="o">/</span>
+<span class="n">sh</span> <span class="n">run_ps</span><span class="o">.</span><span class="n">sh</span>
+</pre></div>
+</div>
+<p><code class="code docutils literal"><span class="pre">universe-starter-agent/run_ps.sh</span></code> will start <code class="code docutils literal"><span class="pre">ps_run.py</span></code> with proper parameters.</p>
+</div>
+<div class="section" id="start-five-learners">
+<h2>Start five learners<a class="headerlink" href="#start-five-learners" title="Permalink to this headline">¶</a></h2>
+<p>In each machine from <cite>ccvl1-5</cite>, start the learner with</p>
+<div class="code bash highlight-default"><div class="highlight"><pre><span></span><span class="n">sh</span> <span class="n">run_learner</span><span class="o">.</span><span class="n">sh</span> <span class="mi">0</span>
+</pre></div>
+</div>
+<p>The number 0 is the worker id for ccvl1, number 1 will be the id for ccvl2.</p>
+<p>The learner will wait until all actors are connected.</p>
+</div>
+<div class="section" id="start-all-actors-and-start-learning">
+<h2>Start all actors and start learning<a class="headerlink" href="#start-all-actors-and-start-learning" title="Permalink to this headline">¶</a></h2>
+<p>Start docker which contains the <code class="code docutils literal"><span class="pre">neonrace</span></code> virtual environment. This script will start two docker containers, each running a neonrace virtual environment.</p>
+<div class="code bash highlight-default"><div class="highlight"><pre><span></span><span class="n">sh</span> <span class="n">run_docker</span><span class="o">.</span><span class="n">sh</span>
+</pre></div>
+</div>
+<p>Start the actor code with</p>
+<div class="code bash highlight-default"><div class="highlight"><pre><span></span><span class="n">sh</span> <span class="n">run_actor</span><span class="o">.</span><span class="n">sh</span>
+</pre></div>
+</div>
+<p><code class="code docutils literal"><span class="pre">run_actor.sh</span></code> will run <code class="code docutils literal"><span class="pre">actor.py</span></code> with proper parameters.</p>
+</div>
+<div class="section" id="check-the-learning-result">
+<h2>Check the learning result<a class="headerlink" href="#check-the-learning-result" title="Permalink to this headline">¶</a></h2>
+<p>The learning procedure can be visualized by connecting to the docker container through vnc.</p>
+<p>Use TurboVNC client to connect to <code class="code docutils literal"><span class="pre">ccvl1.ccvl.jhu.edu:13000</span></code>. Change the url to your own configuration.</p>
+<p>The learnt models will be stored in <code class="file docutils literal"><span class="pre">train-log</span></code> folder. Use <cite>tensorboard</cite> to visualize the result, or use the code in <code class="file docutils literal"><span class="pre">neonrace</span></code> to use trained model.</p>
+</div>
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="virtual_arm.html" class="btn btn-neutral float-right" title="The virtual robot arm" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="multi_learner.html" class="btn btn-neutral" title="Multiple learners component" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Weichao, Vincent, Kaiyue.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
