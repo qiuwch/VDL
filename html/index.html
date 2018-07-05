@@ -1,0 +1,284 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Welcome to VDL’s documentation! &mdash; VDL  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="VDL  documentation" href="#"/>
+        <link rel="next" title="Multiple learners component" href="multi_learner.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="#" class="icon icon-home"> VDL
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="multi_learner.html">Multiple learners component</a></li>
+<li class="toctree-l1"><a class="reference internal" href="VDL.html">Run 5 learners and 10 actors in a cluster</a></li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_arm.html">The virtual robot arm</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">VDL</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="#">Docs</a> &raquo;</li>
+        
+      <li>Welcome to VDL&#8217;s documentation!</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="welcome-to-vdl-s-documentation">
+<h1>Welcome to VDL&#8217;s documentation!<a class="headerlink" href="#welcome-to-vdl-s-documentation" title="Permalink to this headline">¶</a></h1>
+<p>This documentation documents how to reproduce the result in the VDL project. The most update-to-date version can be found in the <a class="reference external" href="https://github.com/qiuwch/VDL.git">VDL github repository</a></p>
+<p>The final presentation is hosted <a class="reference external" href="https://docs.google.com/presentation/d/1r4zVv6bnImt8xTVtxopYhg1lWAeXrgliMfQQTo5Nlng/edit?usp=sharing">here</a>. The pdf version can be downloaded from <a class="reference download internal" href="_downloads/final_presentation.pdf" download=""><code class="xref download docutils literal"><span class="pre">here</span></code></a></p>
+<div class="figure align-center" id="id1">
+<a class="reference internal image-reference" href="_images/architecture.png"><img alt="_images/architecture.png" src="_images/architecture.png" style="width: 500px;" /></a>
+<p class="caption"><span class="caption-text">The architecture with multiple learners and multiple actors</span></p>
+</div>
+<p>This project implements the distributed learning system as shown in the above figure. How to run and benchmark each component and how to run the complete system are documented in the following sections.</p>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="multi_learner.html">Multiple learners component</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="multi_learner.html#multiple-learners-on-tensorflow-mnist">Multiple learners on Tensorflow MNIST</a></li>
+<li class="toctree-l2"><a class="reference internal" href="multi_learner.html#multiple-learners-on-neonrace-task">Multiple learners on Neonrace task</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="VDL.html">Run 5 learners and 10 actors in a cluster</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="VDL.html#install-dependencies-for-the-code">Install dependencies for the code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="VDL.html#modify-the-cluster-configuration">Modify the cluster configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="VDL.html#start-the-parameter-server">Start the parameter server</a></li>
+<li class="toctree-l2"><a class="reference internal" href="VDL.html#start-five-learners">Start five learners</a></li>
+<li class="toctree-l2"><a class="reference internal" href="VDL.html#start-all-actors-and-start-learning">Start all actors and start learning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="VDL.html#check-the-learning-result">Check the learning result</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="virtual_arm.html">The virtual robot arm</a></li>
+</ul>
+</div>
+<div class="section" id="files-in-this-project">
+<h2>Files in this project<a class="headerlink" href="#files-in-this-project" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="c1"># Main</span>
+docs/                   <span class="c1"># Documentation files in reStructuredText format</span>
+universe-starter-agent/ <span class="c1"># Virtual distributed learning system, the code is</span>
+<span class="c1"># modified from https://github.com/openai/universe-starter-agent, which</span>
+<span class="c1"># provides the baseline learning algorithm.</span>
+
+<span class="c1"># Components</span>
+learner-actor/          <span class="c1"># Experiment code for learner-actor communication</span>
+tensorflow_MNIST/       <span class="c1"># Experiment code for P2P-multi-learner</span>
+
+<span class="c1"># Utility</span>
+gym-demo/               <span class="c1"># Virtual environnment demos to make sure the dev</span>
+<span class="c1"># boxs are correctly configured.</span>
+benchmark/              <span class="c1"># Benchmark code to evaluate the network speed and</span>
+<span class="c1"># speed of different virtual environments</span>
+neonrace/               <span class="c1"># Code to run trained neonrace auto-driving model</span>
+spread/                 <span class="c1"># Compiled spread and its python wrapper</span>
+
+<span class="c1"># Virtual arm</span>
+arm-pose/               <span class="c1"># Pose estimation code trained on the virtual arm</span>
+<span class="c1"># and test on the real arm.</span>
+owi-arm/                <span class="c1"># Code to control real and the virtual arm</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="multi_learner.html" class="btn btn-neutral float-right" title="Multiple learners component" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Weichao, Vincent, Kaiyue.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
